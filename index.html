@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HaxOne | Omnichannel Payment Platform</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="assets/css/main.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/animations.css">
+</head>
+<body>
+  <div id="hx-splash">
+    <div class="hx-splash-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100" height="100">
+        <defs>
+          <linearGradient id="splash-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6C63FF" />
+            <stop offset="100%" stop-color="#00D4FF" />
+          </linearGradient>
+        </defs>
+        <path d="M256 20L470 145V367L256 492L42 367V145L256 20Z" fill="none" stroke="url(#splash-grad)" stroke-width="40" stroke-linejoin="round"/>
+        <path d="M180 180v152M332 180v152M180 256h152" stroke="url(#splash-grad)" stroke-width="48" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="hx-app">
+    <aside class="hx-sidebar" id="hx-sidebar">
+      <div class="hx-sidebar-header">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="32" height="32" class="hx-logo-icon">
+          <path d="M256 20L470 145V367L256 492L42 367V145L256 20Z" fill="none" stroke="url(#splash-grad)" stroke-width="40" stroke-linejoin="round"/>
+          <path d="M180 180v152M332 180v152M180 256h152" stroke="url(#splash-grad)" stroke-width="48" stroke-linecap="round"/>
+        </svg>
+        <span class="hx-logo-text">HaxOne</span>
+      </div>
+      <nav class="hx-sidebar-nav">
+        <div class="hx-nav-item hx-nav-item--active" data-page="dashboard" onclick="window.HaxOne.navigate('dashboard')">
+          <div class="hx-nav-icon">📊</div>
+          <span>Dashboard</span>
+        </div>
+        <div class="hx-nav-item" data-page="terminal" onclick="window.HaxOne.navigate('terminal')">
+          <div class="hx-nav-icon">💳</div>
+          <span>Payment Terminal</span>
+        </div>
+        <div class="hx-nav-item" data-page="gateways" onclick="window.HaxOne.navigate('gateways')">
+          <div class="hx-nav-icon">⚙️</div>
+          <span>Gateway Management</span>
+        </div>
+        <div class="hx-nav-item" data-page="mpesa" onclick="window.HaxOne.navigate('mpesa')">
+          <div class="hx-nav-icon">📱</div>
+          <span>M-Pesa Features</span>
+        </div>
+        <div class="hx-nav-item" data-page="reconciliation" onclick="window.HaxOne.navigate('reconciliation')">
+          <div class="hx-nav-icon">⚖️</div>
+          <span>Reconciliation</span>
+        </div>
+        <div class="hx-nav-item" data-page="transactions" onclick="window.HaxOne.navigate('transactions')">
+          <div class="hx-nav-icon">📋</div>
+          <span>Transactions</span>
+        </div>
+        <div class="hx-nav-item" data-page="security" onclick="window.HaxOne.navigate('security')">
+          <div class="hx-nav-icon">🛡️</div>
+          <span>Security Center</span>
+        </div>
+        <div class="hx-nav-item" data-page="api-docs" onclick="window.HaxOne.navigate('api-docs')">
+          <div class="hx-nav-icon">💻</div>
+          <span>API Docs</span>
+        </div>
+      </nav>
+    </aside>
+
+    <main class="hx-main">
+      <header class="hx-header" id="hx-header">
+        <h2 class="hx-header-title" id="hx-header-title">Dashboard</h2>
+        <div class="hx-header-right">
+          <div class="hx-clock" id="hx-clock">--:--:--</div>
+          <button class="hx-btn--icon hx-btn--ghost" id="hx-notification-btn" style="position:relative;">
+            🔔<span class="hx-status-dot hx-status-dot--online"></span>
+          </button>
+          <div class="hx-profile-avatar">
+            <img src="https://ui-avatars.com/api/?name=Admin&background=6C63FF&color=fff" alt="Profile">
+          </div>
+        </div>
+      </header>
+      <div class="hx-content" id="hx-page-content">
+      </div>
+    </main>
+  </div>
+
+  <div id="hx-modal-overlay"></div>
+  <div id="hx-toast-container"></div>
+
+  <script src="assets/js/utils.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/mock-api.js"></script>
+  <!-- Optional modules will map to empty objects if missing -->
+  <script>
+    window.HaxOnePages = {}; 
+    window.HaxOne = window.HaxOne || {};
+    window.HaxOne.sidebar = {
+      init: () => {}, 
+      setActive: (id) => {
+        document.querySelectorAll('.hx-nav-item').forEach(el => el.classList.remove('hx-nav-item--active'));
+        const activeEl = document.querySelector(`.hx-nav-item[data-page="${id}"]`);
+        if (activeEl) activeEl.classList.add('hx-nav-item--active');
+      }
+    };
+    window.HaxOne.header = {
+      init: () => {
+        setInterval(() => {
+          const el = document.getElementById('hx-clock');
+          if (el) el.textContent = new Date().toLocaleTimeString('en-KE');
+        }, 1000);
+      },
+      setTitle: (t) => {
+        const el = document.getElementById('hx-header-title');
+        if (el) el.textContent = t.charAt(0).toUpperCase() + t.slice(1).replace('-', ' ');
+      }
+    };
+    window.HaxOne.modal = { init: () => {} };
+    window.HaxOne.toast = { init: () => {} };
+  </script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
