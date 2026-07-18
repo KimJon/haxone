@@ -1,0 +1,3 @@
+[submodule "pos-app"]
+	path = pos-app
+	url = https://github.com/haxorconsults-boop/haxone.git
