@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { TrendingUp, ShoppingBag, ArrowUp, Download, Eye, Edit2, X, Save } from 'lucide-react';
@@ -125,12 +125,12 @@ export default function SalesPage() {
 
       {/* Chart */}
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <h2 className="font-bold text-[#0D1117] mb-6">Revenue â€” Last 7 Days</h2>
+        <h2 className="font-bold text-[#0D1117] mb-6">Revenue — Last 7 Days</h2>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={dynamicChartData} barSize={32}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                {['Receipt #', 'Date & Time', 'Customer', 'Items', 'Payment', 'Amount', 'Status', 'Actions'].map(h => (
+              <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={v => `${Math.round(v / 1000)}k`} />
               <Tooltip formatter={(v: any) => [`KES ${Number(v).toLocaleString()}`, 'Sales']} contentStyle={{ borderRadius: 8, border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
               <Bar dataKey="sales" fill="#2563EB" radius={[6, 6, 0, 0]} />
@@ -148,7 +148,7 @@ export default function SalesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/70">
-                {['Receipt #', 'Date & Time', 'Customer', 'Items', 'Payment', 'Amount', 'Status'].map(h => (
+                {['Receipt #', 'Date & Time', 'Customer', 'Items', 'Payment', 'Amount', 'Status', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -183,12 +183,7 @@ export default function SalesPage() {
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[t.status] || 'bg-green-50 text-green-700'}`}>
                         {t.status}
                       </span>
-                      </td>
-                      <td className="px-4 py-3.5 text-right">
-                        <button onClick={() => setEditSale(t)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 text-gray-400 rounded-lg transition-colors">
-                          <Edit2 size={14} />
-                        </button>
-                      </td>
+                    </td>
                   </tr>
                 )
               })

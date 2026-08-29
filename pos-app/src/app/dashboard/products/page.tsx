@@ -171,7 +171,8 @@ export default function ProductsPage() {
     reader.readAsText(file);
     e.target.value = ''; // Reset input
   };
-\n  const filtered = products.filter(p => {
+
+  const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'All' || p.category === category;
     return matchSearch && matchCat;
