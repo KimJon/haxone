@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { syncStoreToFirebase } from '@/lib/store-sync';
 import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,9 @@ export default function SetupWizard() {
         joined: new Date().toISOString().split('T')[0]
       };
       localStorage.setItem('haxone_stores', JSON.stringify([newStore, ...existingStores]));
+
+      // 1b. Sync to Firebase so Super Admin sees it from any device
+      syncStoreToFirebase(newStore).catch(() => {});
 
       // 2. Wipe ALL demo data so the customer gets a fresh POS
       const blankState = JSON.stringify([]);

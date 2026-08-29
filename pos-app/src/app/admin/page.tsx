@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { fetchStoresFromFirebase, updateStoreInFirebase, deleteStoreFromFirebase } from '@/lib/store-sync';
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/Logo";
 import { Search, Store, Key, ShieldAlert, Activity, Users, FileText, CheckCircle2 } from "lucide-react";
@@ -30,19 +31,27 @@ export default function SuperAdminPage() {
     { id: 'LOG-891', store: 'System', action: 'Super Admin Portal Initialized', user: 'System', time: new Date().toLocaleString(), severity: 'Info' },
   ];
 
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
     if (typeof window !== 'undefined') {
       try {
         const licData = JSON.parse(localStorage.getItem('haxone_licenses') || '[]');
         setLicenses(licData);
 
-        let storeData = JSON.parse(localStorage.getItem('haxone_stores') || 'null');
-        if (!storeData) {
-          storeData = defaultStores;
-          localStorage.setItem('haxone_stores', JSON.stringify(storeData));
+        // Try Firebase first (cross-device), fallback to localStorage
+        const firebaseStores = await fetchStoresFromFirebase();
+        if (firebaseStores && firebaseStores.length > 0) {
+          setStores(firebaseStores);
+          // Also update localStorage cache
+          localStorage.setItem('haxone_stores', JSON.stringify(firebaseStores));
+        } else {
+          let storeData = JSON.parse(localStorage.getItem('haxone_stores') || 'null');
+          if (!storeData) {
+            storeData = defaultStores;
+            localStorage.setItem('haxone_stores', JSON.stringify(storeData));
+          }
+          setStores(storeData);
         }
-        setStores(storeData);
 
         let logData = JSON.parse(localStorage.getItem('haxone_audit_logs') || 'null');
         if (!logData) {
