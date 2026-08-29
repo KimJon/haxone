@@ -39,11 +39,11 @@ export default function SalesPage() {
     const thisYear = new Date().getFullYear().toString();
     
     return transactions.filter(t => {
-      // t.fullDate is ISO string from pos
-      const tDate = t.fullDate ? t.fullDate.split('T')[0] : '';
+      const rawDate = t.fullDate || t.date || '';
+      const tDate = rawDate.split('T')[0];
       if (activeTab === 'Today') return tDate === today;
       if (activeTab === 'This Week') {
-        const d = new Date(t.fullDate || new Date());
+        const d = new Date(rawDate || new Date());
         const now = new Date();
         const diffTime = Math.abs(now.getTime() - d.getTime());
         const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -66,7 +66,7 @@ export default function SalesPage() {
         const dayStr = d.toISOString().split('T')[0];
         
         const daySales = transactions
-          .filter(t => t.fullDate && t.fullDate.startsWith(dayStr) && t.status === 'Completed')
+          .filter(t => (t.fullDate || t.date || '').startsWith(dayStr) && t.status === 'Completed')
           .reduce((sum, t) => sum + t.amount, 0);
           
         data.push({

@@ -67,25 +67,34 @@ export default function POSPage() {
       return;
     }
 
+    // Capture values NOW before React state changes
+    const capturedCart = [...cart];
+    const capturedSubtotal = capturedCart.reduce((sum, item) => sum + ((Number(item.price) || 0) * (Number(item.quantity) || 1)), 0);
+    const capturedTax = capturedSubtotal * (Number(taxRate) || 0);
+    const capturedTotal = capturedSubtotal + capturedTax;
+    const capturedCustomer = selectedCustomer;
+
     setIsProcessing(true);
     
     setTimeout(() => {
       setIsProcessing(false);
       setSuccessMsg('Payment Successful!');
       
+      const nowISO = new Date().toISOString();
       const newTx = {
         id: `TXN-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
-        total: total,
-        amount: total, // Dashboard compatibility
-        subtotal: subtotal,
-        tax: tax,
+        total: capturedTotal,
+        amount: capturedTotal,
+        subtotal: capturedSubtotal,
+        tax: capturedTax,
         status: 'Completed',
         paymentMethod: method,
-        method: method, // Dashboard compatibility
-        date: new Date().toISOString(),
-        customer: selectedCustomer ? selectedCustomer.name : 'Walk-in Customer',
-        customerId: selectedCustomer ? selectedCustomer.id : null,
-        items: cart.map(c => ({...c, qty: c.quantity, costPrice: c.costPrice || 0}))
+        method: method,
+        date: nowISO,
+        fullDate: nowISO,
+        customer: capturedCustomer ? capturedCustomer.name : 'Walk-in Customer',
+        customerId: capturedCustomer ? capturedCustomer.id : null,
+        items: capturedCart.map(c => ({...c, qty: c.quantity, costPrice: c.costPrice || 0}))
       };
       
       try {
@@ -95,23 +104,23 @@ export default function POSPage() {
           
           const storedProducts = JSON.parse(localStorage.getItem('haxone_products') || '[]');
           const updatedProducts = storedProducts.map((p: any) => {
-            const inCart = cart.find(c => c.id === p.id);
+            const inCart = capturedCart.find(c => c.id === p.id);
             if (inCart) {
-              return { ...p, stock: Math.max(0, p.stock - inCart.quantity) };
+              return { ...p, stock: Math.max(0, (p.stock || 0) - inCart.quantity) };
             }
             return p;
           });
           localStorage.setItem('haxone_products', JSON.stringify(updatedProducts));
           
-          if (selectedCustomer) {
+          if (capturedCustomer) {
             const storedCustomers = JSON.parse(localStorage.getItem('haxone_customers') || '[]');
             const updatedCustomers = storedCustomers.map((c: any) => {
-              if (c.id === selectedCustomer.id) {
+              if (c.id === capturedCustomer.id) {
                 return {
                   ...c,
-                  totalSpent: (c.totalSpent || 0) + total,
+                  totalSpent: (c.totalSpent || 0) + capturedTotal,
                   orders: (c.orders || 0) + 1,
-                  lastVisit: new Date().toISOString()
+                  lastVisit: nowISO
                 };
               }
               return c;
@@ -119,7 +128,7 @@ export default function POSPage() {
             localStorage.setItem('haxone_customers', JSON.stringify(updatedCustomers));
           }
         }
-      } catch(e) {}
+      } catch(e) { console.error('Save error:', e); }
     }, 1500);
   };
 
