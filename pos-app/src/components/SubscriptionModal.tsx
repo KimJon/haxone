@@ -1,7 +1,7 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
-import { X, CreditCard, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 
 interface SubscriptionModalProps {
   isOpen: boolean;
@@ -23,39 +23,19 @@ export function SubscriptionModal({ isOpen, onClose, onSuccess, planName, planPr
     setLoading(true);
     setError('');
 
-    try {
-      const cleanInput = activationCode.toUpperCase().replace(/[^A-Z0-9]/g, '');
-      const storedLicenses = JSON.parse(localStorage.getItem('haxone_licenses') || '[]');
-      const licenseIndex = storedLicenses.findIndex((lic: any) => lic.id.replace(/[^A-Z0-9]/g, '') === cleanInput);
-
-      if (licenseIndex !== -1) {
-        const license = storedLicenses[licenseIndex];
-        
-        if (license.status === 'active') {
-          // Mark it as used
-          storedLicenses[licenseIndex].status = 'used';
-          storedLicenses[licenseIndex].usedBy = 'Current Store';
-          localStorage.setItem('haxone_licenses', JSON.stringify(storedLicenses));
-          
-          alert(`Activation Successful! Welcome to ${planName}.`);
-          if (onSuccess) {
-            onSuccess();
-          } else {
-            window.location.href = '/dashboard';
-          }
+    // Simulate network delay
+    setTimeout(() => {
+      if (activationCode === '06464') {
+        if (onSuccess) {
+          onSuccess();
         } else {
-          setError('This activation code has already been used.');
-          setLoading(false);
+          window.location.href = '/dashboard';
         }
       } else {
-        setError('Invalid activation code. Please check and try again.');
+        setError('Invalid Activation PIN. Please check and try again.');
         setLoading(false);
       }
-    } catch (err) {
-      console.error(err);
-      setError('Connection error. Please try again.');
-      setLoading(false);
-    }
+    }, 800);
   };
 
   return (
@@ -83,22 +63,22 @@ export function SubscriptionModal({ isOpen, onClose, onSuccess, planName, planPr
 
           <div className="space-y-4">
             <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-4">
-              <h3 className="text-sm font-bold text-blue-900 mb-1">Enter Your License Key</h3>
+              <h3 className="text-sm font-bold text-blue-900 mb-1">Enter Activation PIN</h3>
               <p className="text-xs text-blue-700 leading-relaxed">
-                Please enter the 16-character Activation Code provided by your administrator to unlock this software.
+                Please enter the standard 5-digit Activation PIN provided by your administrator to unlock this software.
               </p>
             </div>
             
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Activation Code</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Activation PIN</label>
               <input 
-                type="text" 
+                type="password" 
                 required
                 value={activationCode}
-                onChange={e => setActivationCode(e.target.value.toUpperCase())}
-                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-mono tracking-widest text-center focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] transition-all uppercase"
-                placeholder="HAX-XXXX-XXXX-XXXX"
-                maxLength={20}
+                onChange={e => setActivationCode(e.target.value.replace(/\D/g, ''))}
+                className="w-full border border-gray-200 rounded-xl px-4 py-3 text-lg font-mono tracking-widest text-center focus:outline-none focus:border-[#2563EB] focus:ring-1 focus:ring-[#2563EB] transition-all"
+                placeholder="00000"
+                maxLength={5}
               />
             </div>
 
@@ -111,7 +91,7 @@ export function SubscriptionModal({ isOpen, onClose, onSuccess, planName, planPr
                 {loading ? (
                   <>
                     <Loader2 size={18} className="animate-spin" />
-                    Verifying Code...
+                    Verifying PIN...
                   </>
                 ) : (
                   'Activate License'
