@@ -48,11 +48,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       ]
     },
     {
-      label: "Management",
+      label: "Settings",
       items: [
         { name: 'Employees', href: '/dashboard/employees', icon: Users },
         { name: 'Branches', href: '/dashboard/branches', icon: MapPin },
-        { name: 'AI Insights', href: '/dashboard/ai', icon: Brain },
         { name: 'Settings', href: '/dashboard/settings', icon: Settings },
       ]
     }
@@ -162,11 +161,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </div>
           
           <div className="flex items-center gap-2 md:gap-4 ml-auto">
-            <Link href="/dashboard/ai" className="hidden sm:flex items-center gap-2 bg-gradient-to-r from-[#2563EB] to-[#7C3AED] text-white text-xs font-bold px-3 py-1.5 rounded-full hover:opacity-90 transition-opacity">
-              <Brain className="w-3.5 h-3.5" />
-              AI Copilot
-            </Link>
-            
             <button className="relative text-gray-500 hover:text-[#0D1117] transition-colors p-2 rounded-lg hover:bg-gray-100">
               <Bell className="w-5 h-5" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>

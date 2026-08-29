@@ -53,14 +53,18 @@ export default function SuppliersPage() {
   }, []);
 
   const filtered = suppliers.filter(s => {
-    const matchSearch = s.company.toLowerCase().includes(search.toLowerCase()) ||
-      s.contact.toLowerCase().includes(search.toLowerCase()) ||
-      s.category.toLowerCase().includes(search.toLowerCase());
+    const compName = s.company || s.name || '';
+    const contactName = s.contact || '';
+    const catName = s.category || '';
+    
+    const matchSearch = compName.toLowerCase().includes(search.toLowerCase()) ||
+      contactName.toLowerCase().includes(search.toLowerCase()) ||
+      catName.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'All Status' || s.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  const totalBalance = suppliers.reduce((sum, s) => sum + s.balance, 0);
+  const totalBalance = suppliers.reduce((sum, s) => sum + (s.balance || 0), 0);
 
   const stats = [
     {
@@ -188,8 +192,8 @@ export default function SuppliersPage() {
                         <Truck size={16} className="text-[#2563EB]" />
                       </div>
                       <div>
-                        <p className="font-semibold text-[#0D1117]">{s.company}</p>
-                        <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5"><MapPin size={10} />{s.location}</p>
+                        <p className="font-semibold text-[#0D1117]">{s.company || s.name}</p>
+                        <p className="flex items-center gap-1 text-xs text-gray-400 mt-0.5"><MapPin size={10} />{s.location || 'Unknown'}</p>
                       </div>
                     </div>
                   </td>

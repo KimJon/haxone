@@ -57,31 +57,31 @@ export default function SalesPage() {
 
   const filtered = getFilteredTransactions();
 
-    const getChartData = () => {
-      const data = [];
-      const today = new Date();
-      for (let i = 6; i >= 0; i--) {
-        const d = new Date(today);
-        d.setDate(d.getDate() - i);
-        const dayStr = d.toISOString().split('T')[0];
+  const getChartData = () => {
+    const data = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dayStr = d.toISOString().split('T')[0];
+      
+      const daySales = transactions
+        .filter(t => (t.fullDate || t.date || '').startsWith(dayStr) && t.status === 'Completed')
+        .reduce((sum, t) => sum + (Number(t.amount) || Number(t.total) || 0), 0);
         
-        const daySales = transactions
-          .filter(t => (t.fullDate || t.date || '').startsWith(dayStr) && t.status === 'Completed')
-          .reduce((sum, t) => sum + t.amount, 0);
-          
-        data.push({
-          day: d.toLocaleDateString('en-US', { weekday: 'short' }),
-          sales: daySales
-        });
-      }
-      return data;
-    };
+      data.push({
+        day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+        sales: daySales
+      });
+    }
+    return data;
+  };
 
-    const dynamicChartData = getChartData();
-    const totalRevenue = filtered.filter(t => t.status === 'Completed').reduce((s, t) => s + t.amount, 0);
-    const avgOrder = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
-    const totalOrders = filtered.length;
-    const returnsCount = filtered.filter(t => t.status === 'Refunded').length;
+  const dynamicChartData = getChartData();
+  const totalRevenue = filtered.filter(t => t.status === 'Completed').reduce((s, t) => s + (Number(t.amount) || Number(t.total) || 0), 0);
+  const avgOrder = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
+  const totalOrders = filtered.length;
+  const returnsCount = filtered.filter(t => t.status === 'Refunded').length;
 
   return (
     <div className="min-h-screen bg-[#F3F4F6] p-6">
@@ -176,7 +176,7 @@ export default function SalesPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3.5">
-                      <span className="font-semibold text-[#0D1117]">KES {t.amount?.toLocaleString()}</span>
+                      <span className="font-semibold text-[#0D1117]">KES {(Number(t.amount) || Number(t.total) || 0).toLocaleString()}</span>
                     </td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[t.status] || 'bg-green-50 text-green-700'}`}>

@@ -61,10 +61,23 @@ export default function InventoryPage() {
 
   const addSupplier = () => {
     if (newSupplierName) {
-      const newSup = { id: `SUP-${Math.random().toString(36).substr(2,6)}`, name: newSupplierName };
+      const newSup = { 
+        id: `SUP-${Math.random().toString(36).substr(2,6)}`, 
+        company: newSupplierName, 
+        name: newSupplierName, // Keep name for legacy inventory component mapping
+        status: 'Active',
+        balance: 0,
+        orders: 0,
+        products: 0,
+        category: '',
+        contact: '',
+        phone: '',
+        email: '',
+        location: ''
+      };
       const updated = [...suppliers, newSup];
       setSuppliers(updated);
-      setSelectedSupplier(newSup.name);
+      setSelectedSupplier(newSup.company);
       setNewSupplierName('');
       if (typeof window !== 'undefined') localStorage.setItem('haxone_suppliers', JSON.stringify(updated));
     }
@@ -77,7 +90,20 @@ export default function InventoryPage() {
     if (newSupplierName) {
       finalSupplier = newSupplierName;
       // Auto add to supplier list
-      const newSup = { id: `SUP-${Math.random().toString(36).substr(2,6)}`, name: newSupplierName };
+      const newSup = { 
+        id: `SUP-${Math.random().toString(36).substr(2,6)}`, 
+        company: newSupplierName,
+        name: newSupplierName,
+        status: 'Active',
+        balance: 0,
+        orders: 0,
+        products: 0,
+        category: '',
+        contact: '',
+        phone: '',
+        email: '',
+        location: ''
+      };
       const updated = [...suppliers, newSup];
       setSuppliers(updated);
       if (typeof window !== 'undefined') localStorage.setItem('haxone_suppliers', JSON.stringify(updated));
@@ -412,7 +438,7 @@ export default function InventoryPage() {
                     <div className="flex gap-2">
                       <select value={selectedSupplier} onChange={e => setSelectedSupplier(e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]">
                         <option value="">Select Supplier...</option>
-                        {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                        {suppliers.map(s => <option key={s.id} value={s.company || s.name}>{s.company || s.name}</option>)}
                       </select>
                       <input type="text" placeholder="Or New Supplier Name" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} className="w-1/3 border border-gray-200 rounded-lg px-2 text-sm"/>
                       <button onClick={addSupplier} className="bg-gray-100 text-gray-600 px-3 rounded-lg hover:bg-gray-200 font-bold text-sm">+</button>
