@@ -34,6 +34,7 @@ export default function SetupWizard() {
 
   const [businessName, setBusinessName] = useState('');
   const [ownerName, setOwnerName] = useState('');
+  const [ownerPin, setOwnerPin] = useState('');
 
   const handlePaymentSuccess = () => {
     setShowPayment(false);
@@ -63,8 +64,20 @@ export default function SetupWizard() {
       localStorage.setItem('haxone_customers', blankState);
       localStorage.setItem('haxone_suppliers', blankState);
       localStorage.setItem('haxone_expenses', blankState);
-      localStorage.setItem('haxone_employees', blankState);
       localStorage.setItem('haxone_branches', blankState);
+      
+      // 3. Create the Owner Employee and Set Active Store
+      const ownerEmployee = {
+        id: `EMP-${Math.floor(Math.random() * 10000)}`,
+        name: ownerName || 'Owner',
+        role: 'Admin',
+        branch: 'Main Branch',
+        status: 'Active',
+        pin: ownerPin || '1234'
+      };
+      localStorage.setItem('haxone_employees', JSON.stringify([ownerEmployee]));
+      localStorage.setItem('haxone_active_store', JSON.stringify(newStore));
+      localStorage.setItem('haxone_active_user', JSON.stringify(ownerEmployee));
     }
 
     // Finalize setup
@@ -129,16 +142,23 @@ export default function SetupWizard() {
                     <Label className="text-gray-600 font-medium">Business Name</Label>
                     <Input value={businessName} onChange={e => setBusinessName(e.target.value)} placeholder="Sunrise Supermarket" className="mt-1 h-11 bg-gray-50 border-gray-200 focus:ring-[#2563EB]" />
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label className="text-gray-600 font-medium">Owner Name</Label>
-                      <Input value={ownerName} onChange={e => setOwnerName(e.target.value)} placeholder="John Kamau" className="mt-1 h-11 bg-gray-50 border-gray-200 focus:ring-[#2563EB]" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-gray-600 font-medium">Owner Name</Label>
+                        <Input value={ownerName} onChange={e => setOwnerName(e.target.value)} placeholder="John Kamau" className="mt-1 h-11 bg-gray-50 border-gray-200 focus:ring-[#2563EB]" />
+                      </div>
+                      <div>
+                        <Label className="text-gray-600 font-medium">Owner 4-Digit Login PIN</Label>
+                        <Input 
+                          type="password" 
+                          maxLength={4} 
+                          value={ownerPin} 
+                          onChange={e => setOwnerPin(e.target.value.replace(/\D/g, ''))} 
+                          placeholder="e.g. 1234" 
+                          className="mt-1 h-11 bg-gray-50 border-gray-200 focus:ring-[#2563EB] font-mono tracking-widest text-center" 
+                        />
+                      </div>
                     </div>
-                    <div>
-                      <Label className="text-gray-600 font-medium">Phone</Label>
-                      <Input placeholder="+254 712 345 678" className="mt-1 h-11 bg-gray-50 border-gray-200 focus:ring-[#2563EB]" />
-                    </div>
-                  </div>
                   <div>
                     <Label className="text-gray-600 font-medium">Email</Label>
                     <Input type="email" placeholder="john@sunrise.co.ke" className="mt-1 h-11 bg-gray-50 border-gray-200 focus:ring-[#2563EB]" />

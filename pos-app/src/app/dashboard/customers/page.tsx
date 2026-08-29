@@ -100,14 +100,29 @@ export default function CustomersPage() {
     return matchSearch && matchTier;
   });
 
-  const totalRevenue = customers.reduce((s, c) => s + c.spent, 0);
+  const totalRevenue = customers.reduce((sum, c) => sum + (c.spent || 0), 0);
   const avgSpend = customers.length ? Math.round(totalRevenue / customers.length) : 0;
+  
+  // Calculate active customers this month
+  const currentMonth = new Date().getMonth();
+  const activeThisMonth = customers.filter(c => {
+    if (!c.lastVisit || c.lastVisit === 'Never') return false;
+    const lastVisitDate = new Date(c.lastVisit);
+    return lastVisitDate.getMonth() === currentMonth;
+  }).length;
+  
+  // Try to read sales to calculate total revenue properly if totalSpent is not reliable
+  let realRevenue = totalRevenue;
+  if (typeof window !== 'undefined') {
+    const sales = JSON.parse(localStorage.getItem('haxone_sales') || '[]');
+    realRevenue = sales.reduce((acc: number, s: any) => acc + (s.total || s.amount || 0), 0);
+  }
 
   const stats = [
-    { label: 'Total Customers', value: '1,284', icon: <Users size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', sub: '+12 this week' },
-    { label: 'Active This Month', value: '432', icon: <TrendingUp size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: '33.6% of total' },
+    { label: 'Total Customers', value: customers.length.toLocaleString(), icon: <Users size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', sub: 'Total registered' },
+    { label: 'Active This Month', value: activeThisMonth.toLocaleString(), icon: <TrendingUp size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: 'Recent visits' },
     { label: 'Avg Spend', value: `KES ${avgSpend.toLocaleString()}`, icon: <DollarSign size={20} />, color: 'text-violet-600', bg: 'bg-violet-50', sub: 'Per customer' },
-    { label: 'Total Revenue', value: 'KES 2.3M', icon: <Star size={20} />, color: 'text-amber-600', bg: 'bg-amber-50', sub: 'All time' },
+    { label: 'Total Revenue', value: `KES ${realRevenue.toLocaleString()}`, icon: <Star size={20} />, color: 'text-amber-600', bg: 'bg-amber-50', sub: 'All time' },
   ];
 
   return (

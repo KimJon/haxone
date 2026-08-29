@@ -1,359 +1,535 @@
-'use client';
-import { Plus, X, ArrowDown, ArrowUp, AlertCircle, CheckCircle, ShoppingCart, Package, Truck } from 'lucide-react';
+﻿'use client';
+
 import { useState, useEffect } from 'react';
+import {
+  Package, Search, Plus, ArrowDown, ArrowUp, X, Filter, Trash2, Shield, Box, FileText, CheckCircle, Truck, DollarSign
+} from 'lucide-react';
 
 export default function InventoryPage() {
-  const [showReceiveModal, setShowReceiveModal] = useState(false);
-  const [showDispatchModal, setShowDispatchModal] = useState(false);
   const [products, setProducts] = useState<any[]>([]);
   const [movements, setMovements] = useState<any[]>([]);
-  const [receiveForm, setReceiveForm] = useState({ productId: '', qty: '', supplier: '', ref: '', date: new Date().toISOString().split('T')[0], notes: '' });
-  const [dispatchForm, setDispatchForm] = useState({ productId: '', qty: '', destination: '', ref: '', date: new Date().toISOString().split('T')[0], reason: 'Sale', notes: '' });
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'movements' | 'alerts'>('movements');
+
+  // Modals
+  const [showReceiveModal, setShowReceiveModal] = useState(false);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        const storedProducts = JSON.parse(localStorage.getItem('haxone_products') || '[]');
-        setProducts(storedProducts);
-        const storedMovements = JSON.parse(localStorage.getItem('haxone_inventory_movements') || '[]');
-        setMovements(storedMovements);
-      } catch (e) {}
+      setProducts(JSON.parse(localStorage.getItem('haxone_products') || '[]'));
+      setMovements(JSON.parse(localStorage.getItem('haxone_inventory_movements') || '[]'));
+      setSuppliers(JSON.parse(localStorage.getItem('haxone_suppliers') || '[]'));
     }
   }, []);
 
-  const lowStockProducts = products.filter(p => p.stock <= (p.minStock || 5));
-  const totalStockValue = products.reduce((sum, p) => sum + (p.stock * (p.costPrice || p.price || 0)), 0);
-  const todayMovements = movements.filter(m => m.date === new Date().toISOString().split('T')[0]);
+  const lowStockProducts = products.filter(p => (p.stock || 0) <= (p.minStock || 5));
 
-  const handleReceive = () => {
-    if (!receiveForm.productId || !receiveForm.qty) {
-      alert("Select a product and enter quantity");
-      return;
+  // Multi-item cart states
+  const [cart, setCart] = useState<any[]>([]);
+  const [selectedSupplier, setSelectedSupplier] = useState('');
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [reference, setReference] = useState('');
+  const [notes, setNotes] = useState('');
+  
+  // Receive specific
+  const [paymentStatus, setPaymentStatus] = useState('Pending');
+  const [paymentRef, setPaymentRef] = useState('');
+
+  // Dispatch specific
+  const [destination, setDestination] = useState('');
+  const [reason, setReason] = useState('Sale');
+
+  const addToCart = (product: any) => {
+    if (!cart.find(c => c.id === product.id)) {
+      setCart([...cart, { ...product, quantity: 1, costPrice: product.costPrice || 0 }]);
     }
-    const qtyNumber = Number(receiveForm.qty);
-    if (qtyNumber <= 0) return;
-
-    const targetProduct = products.find(p => p.id === receiveForm.productId);
-    if (!targetProduct) return;
-
-    const updatedProducts = products.map(p =>
-      p.id === receiveForm.productId ? { ...p, stock: (p.stock || 0) + qtyNumber } : p
-    );
-
-    const newMovement = {
-      id: `MV-${Date.now()}`,
-      date: receiveForm.date,
-      product: targetProduct.name,
-      productId: targetProduct.id,
-      type: 'Stock In',
-      qty: qtyNumber,
-      ref: receiveForm.ref || `RCV-${Date.now().toString(36).toUpperCase()}`,
-      source: receiveForm.supplier || 'Unknown Supplier',
-      reason: 'Purchase',
-      notes: receiveForm.notes,
-      user: 'Admin'
-    };
-
-    const updatedMovements = [newMovement, ...movements];
-    setProducts(updatedProducts);
-    setMovements(updatedMovements);
-    localStorage.setItem('haxone_products', JSON.stringify(updatedProducts));
-    localStorage.setItem('haxone_inventory_movements', JSON.stringify(updatedMovements));
-    setReceiveForm({ productId: '', qty: '', supplier: '', ref: '', date: new Date().toISOString().split('T')[0], notes: '' });
-    setShowReceiveModal(false);
   };
 
-  const handleDispatch = () => {
-    if (!dispatchForm.productId || !dispatchForm.qty) {
-      alert("Select a product and enter quantity");
-      return;
+  const updateCartQty = (id: string, qty: number) => {
+    setCart(cart.map(c => c.id === id ? { ...c, quantity: Number(qty) } : c));
+  };
+  
+  const updateCartCost = (id: string, cost: number) => {
+    setCart(cart.map(c => c.id === id ? { ...c, costPrice: Number(cost) } : c));
+  };
+
+  const removeCartItem = (id: string) => {
+    setCart(cart.filter(c => c.id !== id));
+  };
+
+  const addSupplier = () => {
+    if (newSupplierName) {
+      const newSup = { id: `SUP-${Math.random().toString(36).substr(2,6)}`, name: newSupplierName };
+      const updated = [...suppliers, newSup];
+      setSuppliers(updated);
+      setSelectedSupplier(newSup.name);
+      setNewSupplierName('');
+      if (typeof window !== 'undefined') localStorage.setItem('haxone_suppliers', JSON.stringify(updated));
     }
-    const qtyNumber = Number(dispatchForm.qty);
-    if (qtyNumber <= 0) return;
+  };
 
-    const targetProduct = products.find(p => p.id === dispatchForm.productId);
-    if (!targetProduct) return;
+  const handleReceiveGoods = () => {
+    if (cart.length === 0) return alert("Add items to receive");
+    
+    let updatedProducts = [...products];
+    const newMovements = cart.map(item => {
+      const pIdx = updatedProducts.findIndex(p => p.id === item.id);
+      if (pIdx > -1) {
+        updatedProducts[pIdx].stock = (updatedProducts[pIdx].stock || 0) + item.quantity;
+        updatedProducts[pIdx].costPrice = item.costPrice; // Update cost price
+      }
+      return {
+        id: `MOV-${Math.random().toString(36).substr(2,6)}`,
+        date: new Date().toISOString(),
+        product: item.name,
+        type: 'Stock In',
+        qty: item.quantity,
+        totalCost: item.quantity * item.costPrice,
+        ref: reference,
+        source: selectedSupplier,
+        paymentStatus,
+        paymentRef,
+        notes,
+        user: 'Admin'
+      };
+    });
 
-    if (qtyNumber > (targetProduct.stock || 0)) {
-      alert(`Insufficient stock! ${targetProduct.name} only has ${targetProduct.stock} units available.`);
-      return;
-    }
-
-    const updatedProducts = products.map(p =>
-      p.id === dispatchForm.productId ? { ...p, stock: (p.stock || 0) - qtyNumber } : p
-    );
-
-    const newMovement = {
-      id: `MV-${Date.now()}`,
-      date: dispatchForm.date,
-      product: targetProduct.name,
-      productId: targetProduct.id,
-      type: 'Stock Out',
-      qty: qtyNumber,
-      ref: dispatchForm.ref || `DSP-${Date.now().toString(36).toUpperCase()}`,
-      source: dispatchForm.destination || 'Unknown Destination',
-      reason: dispatchForm.reason,
-      notes: dispatchForm.notes,
-      user: 'Admin'
-    };
-
-    const updatedMovements = [newMovement, ...movements];
+    const finalMovements = [...newMovements, ...movements];
     setProducts(updatedProducts);
-    setMovements(updatedMovements);
-    localStorage.setItem('haxone_products', JSON.stringify(updatedProducts));
-    localStorage.setItem('haxone_inventory_movements', JSON.stringify(updatedMovements));
-    setDispatchForm({ productId: '', qty: '', destination: '', ref: '', date: new Date().toISOString().split('T')[0], reason: 'Sale', notes: '' });
+    setMovements(finalMovements);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('haxone_products', JSON.stringify(updatedProducts));
+      localStorage.setItem('haxone_inventory_movements', JSON.stringify(finalMovements));
+      
+      // Also save as an Expense if it's paid
+      if (paymentStatus === 'Paid') {
+         const totalCost = newMovements.reduce((acc, m) => acc + (m.totalCost || 0), 0);
+         const expenses = JSON.parse(localStorage.getItem('haxone_expenses') || '[]');
+         expenses.unshift({
+           id: `EXP-${Math.random().toString(36).substr(2,6)}`,
+           date: new Date().toISOString(),
+           category: 'Inventory Purchase',
+           amount: totalCost,
+           description: `Received goods from ${selectedSupplier} (Ref: ${reference})`,
+           paymentMethod: 'Bank/M-Pesa',
+           ref: paymentRef
+         });
+         localStorage.setItem('haxone_expenses', JSON.stringify(expenses));
+      }
+    }
+
+    closeModals();
+  };
+
+  const handleDispatchGoods = () => {
+    if (cart.length === 0) return alert("Add items to dispatch");
+    
+    let updatedProducts = [...products];
+    for (const item of cart) {
+       const p = updatedProducts.find(p => p.id === item.id);
+       if (!p || p.stock < item.quantity) {
+          return alert(`Not enough stock for ${item.name}! Available: ${p?.stock || 0}`);
+       }
+    }
+
+    const newMovements = cart.map(item => {
+      const pIdx = updatedProducts.findIndex(p => p.id === item.id);
+      if (pIdx > -1) {
+        updatedProducts[pIdx].stock = (updatedProducts[pIdx].stock || 0) - item.quantity;
+      }
+      return {
+        id: `MOV-${Math.random().toString(36).substr(2,6)}`,
+        date: new Date().toISOString(),
+        product: item.name,
+        type: 'Stock Out',
+        qty: item.quantity,
+        ref: reference,
+        destination: destination,
+        reason,
+        notes,
+        user: 'Admin'
+      };
+    });
+
+    const finalMovements = [...newMovements, ...movements];
+    setProducts(updatedProducts);
+    setMovements(finalMovements);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('haxone_products', JSON.stringify(updatedProducts));
+      localStorage.setItem('haxone_inventory_movements', JSON.stringify(finalMovements));
+    }
+
+    closeModals();
+  };
+
+  const closeModals = () => {
+    setShowReceiveModal(false);
     setShowDispatchModal(false);
+    setCart([]);
+    setSelectedSupplier('');
+    setReference('');
+    setNotes('');
+    setPaymentRef('');
+    setDestination('');
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-[#0D1117]">Inventory Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Track stock movements, receive goods, and dispatch orders.</p>
+          <h1 className="text-2xl font-bold text-[#0D1117]">Inventory</h1>
+          <p className="text-sm text-gray-500 mt-1">Receive goods, track movements, and monitor stock.</p>
         </div>
         <div className="flex items-center gap-3">
-          <button
+          <button 
+            onClick={() => setShowDispatchModal(true)}
+            className="flex items-center gap-2 bg-white border border-red-200 hover:bg-red-50 text-red-600 px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
+          >
+            <ArrowUp className="w-4 h-4" />
+            Dispatch
+          </button>
+          <button 
             onClick={() => setShowReceiveModal(true)}
-            className="flex items-center gap-2 bg-[#10B981] hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
+            className="flex items-center gap-2 bg-[#10B981] hover:bg-[#059669] text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
           >
             <ArrowDown className="w-4 h-4" />
-            Receive Goods
-          </button>
-          <button
-            onClick={() => setShowDispatchModal(true)}
-            className="flex items-center gap-2 bg-[#F59E0B] hover:bg-amber-600 text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
-          >
-            <Truck className="w-4 h-4" />
-            Dispatch Goods
+            Receive
           </button>
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center"><Package className="w-4 h-4 text-[#2563EB]" /></div>
-            <span className="text-xs font-medium text-gray-500">Total Products</span>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+            <Package className="w-6 h-6 text-[#2563EB]" />
           </div>
-          <div className="text-2xl font-bold text-[#0D1117]">{products.length}</div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">Products in Catalog</div>
+            <div className="text-2xl font-bold text-[#0D1117]">{products.length}</div>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-lg bg-green-50 flex items-center justify-center"><CheckCircle className="w-4 h-4 text-[#10B981]" /></div>
-            <span className="text-xs font-medium text-gray-500">Stock Value</span>
+        <div className="bg-white p-5 rounded-xl border border-red-50 border-l-4 border-l-red-500 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center">
+            <Box className="w-6 h-6 text-red-500" />
           </div>
-          <div className="text-2xl font-bold text-[#0D1117]">KES {totalStockValue.toLocaleString()}</div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">Low Stock Alerts</div>
+            <div className="text-2xl font-bold text-red-600">{lowStockProducts.length}</div>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center"><AlertCircle className="w-4 h-4 text-amber-500" /></div>
-            <span className="text-xs font-medium text-gray-500">Low Stock Alerts</span>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+            <ArrowDown className="w-6 h-6 text-green-600" />
           </div>
-          <div className="text-2xl font-bold text-[#EF4444]">{lowStockProducts.length}</div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">Total Stock In</div>
+            <div className="text-2xl font-bold text-green-700">{movements.filter(m => m.type === 'Stock In').length}</div>
+          </div>
         </div>
-        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-lg bg-purple-50 flex items-center justify-center"><ArrowUp className="w-4 h-4 text-[#7C3AED]" /></div>
-            <span className="text-xs font-medium text-gray-500">Movements Today</span>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
+            <ArrowUp className="w-6 h-6 text-orange-600" />
           </div>
-          <div className="text-2xl font-bold text-[#0D1117]">{todayMovements.length}</div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">Total Stock Out</div>
+            <div className="text-2xl font-bold text-orange-700">{movements.filter(m => m.type === 'Stock Out').length}</div>
+          </div>
         </div>
       </div>
 
-      {/* Low Stock Alerts */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center gap-3">
-          <AlertCircle size={18} className="text-amber-500" />
-          <h2 className="font-bold text-[#0D1117]">Low Stock Alerts</h2>
-          <span className="ml-auto text-xs bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full font-semibold">{lowStockProducts.length} items</span>
+      {/* Main Content Area */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex border-b border-gray-100">
+          <button 
+            onClick={() => setActiveTab('movements')}
+            className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${activeTab === 'movements' ? 'border-[#2563EB] text-[#2563EB]' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}
+          >
+            Recent Movements
+          </button>
+          <button 
+            onClick={() => setActiveTab('alerts')}
+            className={`flex-1 py-3 text-sm font-bold text-center border-b-2 transition-colors ${activeTab === 'alerts' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:bg-gray-50'}`}
+          >
+            Low Stock Alerts ({lowStockProducts.length})
+          </button>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/70">
-                {['Product', 'Current Stock', 'Min Stock', 'Suggested Order', 'Action'].map(h => (
-                  <th key={h} className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {lowStockProducts.length === 0 ? (
-                <tr><td colSpan={5} className="px-4 py-6 text-center text-gray-500">All products are adequately stocked!</td></tr>
-              ) : lowStockProducts.map(item => (
-                <tr key={item.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-4 py-3.5 font-medium text-[#0D1117]">{item.name}</td>
-                  <td className="px-4 py-3.5">
-                    <span className={`font-bold ${item.stock === 0 ? 'text-red-600' : 'text-amber-600'}`}>{item.stock}</span>
-                    {item.stock === 0 && <span className="ml-2 text-xs bg-red-50 text-red-600 px-2 py-0.5 rounded-full font-semibold">Out</span>}
-                  </td>
-                  <td className="px-4 py-3.5 text-gray-500">{item.minStock || 5}</td>
-                  <td className="px-4 py-3.5 font-semibold text-blue-600">{Math.max(50, (item.minStock || 5) * 3)} units</td>
-                  <td className="px-4 py-3.5">
-                    <button onClick={() => { setReceiveForm(f => ({...f, productId: item.id})); setShowReceiveModal(true); }} className="flex items-center gap-1.5 bg-[#2563EB] hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
-                      <ShoppingCart size={12} /> Restock
-                    </button>
-                  </td>
+
+        {activeTab === 'movements' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/70">
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Date</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Type</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Product</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Qty</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Details</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Cost/Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Stock Movements */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100">
-          <h2 className="font-bold text-[#0D1117]">Recent Stock Movements</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50/70">
-                {['Date', 'Product', 'Type', 'Quantity', 'Reference', 'Source / Destination', 'Reason', 'Recorded By'].map(h => (
-                  <th key={h} className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {movements.map((mov, i) => (
+                  <tr key={i} className="hover:bg-gray-50/50 transition-colors">
+                    <td className="px-5 py-3 text-gray-500">{new Date(mov.date).toLocaleString()}</td>
+                    <td className="px-5 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold ${
+                        mov.type === 'Stock In' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      }`}>
+                        {mov.type}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 font-semibold text-[#0D1117]">{mov.product}</td>
+                    <td className="px-5 py-3 font-bold">{mov.qty}</td>
+                    <td className="px-5 py-3 text-xs text-gray-500">
+                      <div>Ref: {mov.ref || 'N/A'}</div>
+                      {mov.source && <div>From: {mov.source}</div>}
+                      {mov.destination && <div>To: {mov.destination}</div>}
+                    </td>
+                    <td className="px-5 py-3 text-xs">
+                      {mov.type === 'Stock In' && (
+                        <>
+                          <div className="font-bold text-gray-800">KES {(mov.totalCost || 0).toLocaleString()}</div>
+                          <div className={mov.paymentStatus === 'Paid' ? 'text-green-600' : 'text-amber-600'}>{mov.paymentStatus}</div>
+                        </>
+                      )}
+                    </td>
+                  </tr>
                 ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {movements.length === 0 ? (
-                <tr><td colSpan={8} className="px-4 py-6 text-center text-gray-500">No stock movements recorded yet.</td></tr>
-              ) : movements.map(m => (
-                <tr key={m.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-4 py-3.5 text-gray-500 text-xs whitespace-nowrap">{m.date}</td>
-                  <td className="px-4 py-3.5 font-medium text-[#0D1117]">{m.product}</td>
-                  <td className="px-4 py-3.5">
-                    {m.type === 'Stock In'
-                      ? <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700"><CheckCircle size={11} /> Received</span>
-                      : <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600"><ArrowDown size={11} /> Dispatched</span>}
-                  </td>
-                  <td className="px-4 py-3.5 font-bold text-[#0D1117]">{m.qty}</td>
-                  <td className="px-4 py-3.5 font-mono text-xs text-[#2563EB]">{m.ref}</td>
-                  <td className="px-4 py-3.5 text-gray-600">{m.source}</td>
-                  <td className="px-4 py-3.5 text-gray-500 text-xs">{m.reason || '-'}</td>
-                  <td className="px-4 py-3.5 text-gray-500">{m.user}</td>
+                {movements.length === 0 && (
+                  <tr><td colSpan={6} className="text-center py-10 text-gray-500">No inventory movements recorded yet.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === 'alerts' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50/70">
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Product</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Category</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Current Stock</th>
+                  <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Min Required</th>
+                  <th className="text-right px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {lowStockProducts.map((p, i) => (
+                  <tr key={i} className="hover:bg-red-50/20 transition-colors">
+                    <td className="px-5 py-3 font-bold text-[#0D1117]">{p.name}</td>
+                    <td className="px-5 py-3 text-gray-500">{p.category}</td>
+                    <td className="px-5 py-3 font-black text-red-600">{p.stock || 0}</td>
+                    <td className="px-5 py-3 text-gray-500">{p.minStock || 5}</td>
+                    <td className="px-5 py-3 text-right">
+                      <button 
+                        onClick={() => { setShowReceiveModal(true); addToCart(p); }}
+                        className="text-xs bg-blue-50 text-[#2563EB] font-bold px-3 py-1.5 rounded hover:bg-[#2563EB] hover:text-white transition-colors"
+                      >
+                        Reorder
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {lowStockProducts.length === 0 && (
+                  <tr><td colSpan={5} className="text-center py-10 text-gray-500">No low stock alerts. You are fully stocked!</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
-      {/* Receive Goods Modal */}
+      {/* RECEIVE MODAL */}
       {showReceiveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center"><ArrowDown className="w-5 h-5 text-[#10B981]" /></div>
-                <h2 className="text-lg font-bold text-[#0D1117]">Receive Goods</h2>
-              </div>
-              <button onClick={() => setShowReceiveModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 flex-shrink-0">
+              <h2 className="text-lg font-bold text-[#0D1117] flex items-center gap-2"><ArrowDown className="text-[#10B981] w-5 h-5"/> Receive Goods (Stock In)</h2>
+              <button onClick={closeModals} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Product *</label>
-                <select value={receiveForm.productId} onChange={e => setReceiveForm(f => ({...f, productId: e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB] bg-white">
-                  <option value="">-- Select Product --</option>
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (Current: {p.stock})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Quantity Received *</label>
-                  <input type="number" value={receiveForm.qty} onChange={e => setReceiveForm(f => ({...f, qty: e.target.value}))} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Date</label>
-                  <input type="date" value={receiveForm.date} onChange={e => setReceiveForm(f => ({...f, date: e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Supplier</label>
-                <input value={receiveForm.supplier} onChange={e => setReceiveForm(f => ({...f, supplier: e.target.value}))} placeholder="Supplier name" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Purchase Order / Reference</label>
-                <input value={receiveForm.ref} onChange={e => setReceiveForm(f => ({...f, ref: e.target.value}))} placeholder="PO-0090" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Notes</label>
-                <textarea value={receiveForm.notes} onChange={e => setReceiveForm(f => ({...f, notes: e.target.value}))} rows={2} placeholder="Any additional notes..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB] resize-none" />
-              </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6">
+               <div className="w-full lg:w-1/2 space-y-4 border-r border-gray-100 pr-0 lg:pr-6">
+                 <div>
+                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Search Products to Receive</label>
+                   <select onChange={(e) => {
+                     const p = products.find(p => p.id === e.target.value);
+                     if(p) addToCart(p);
+                     e.target.value = "";
+                   }} className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:border-[#2563EB] bg-gray-50">
+                     <option value="">Select a product...</option>
+                     {products.map(p => <option key={p.id} value={p.id}>{p.name} (Current: {p.stock})</option>)}
+                   </select>
+                 </div>
+                 
+                 <div className="border border-gray-200 rounded-xl overflow-hidden">
+                   <div className="bg-gray-50 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">Receive Cart</div>
+                   <div className="max-h-60 overflow-y-auto p-2 space-y-2">
+                     {cart.map((c, i) => (
+                       <div key={i} className="flex flex-col gap-2 p-2 bg-white border border-gray-100 rounded-lg shadow-sm">
+                         <div className="flex justify-between items-start">
+                           <div className="font-bold text-sm text-[#0D1117] truncate max-w-[200px]">{c.name}</div>
+                           <button onClick={() => removeCartItem(c.id)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4"/></button>
+                         </div>
+                         <div className="flex gap-2">
+                           <div className="flex-1">
+                             <label className="text-[10px] text-gray-500 block">Qty</label>
+                             <input type="number" min="1" value={c.quantity} onChange={(e) => updateCartQty(c.id, Number(e.target.value))} className="w-full border border-gray-200 rounded px-2 py-1 text-sm"/>
+                           </div>
+                           <div className="flex-1">
+                             <label className="text-[10px] text-gray-500 block">Cost/Unit</label>
+                             <input type="number" min="0" value={c.costPrice} onChange={(e) => updateCartCost(c.id, Number(e.target.value))} className="w-full border border-gray-200 rounded px-2 py-1 text-sm"/>
+                           </div>
+                         </div>
+                       </div>
+                     ))}
+                     {cart.length === 0 && <div className="text-center py-4 text-sm text-gray-400">Select products above to add to cart.</div>}
+                   </div>
+                 </div>
+               </div>
+               
+               <div className="w-full lg:w-1/2 space-y-4">
+                 <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Supplier</label>
+                    <div className="flex gap-2">
+                      <select value={selectedSupplier} onChange={e => setSelectedSupplier(e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]">
+                        <option value="">Select Supplier...</option>
+                        {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                      </select>
+                      <input type="text" placeholder="Or New Supplier Name" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} className="w-1/3 border border-gray-200 rounded-lg px-2 text-sm"/>
+                      <button onClick={addSupplier} className="bg-gray-100 text-gray-600 px-3 rounded-lg hover:bg-gray-200 font-bold text-sm">+</button>
+                    </div>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Purchase Order / Ref</label>
+                     <input type="text" value={reference} onChange={e => setReference(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]"/>
+                   </div>
+                   <div>
+                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Payment Status</label>
+                     <select value={paymentStatus} onChange={e => setPaymentStatus(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]">
+                       <option>Pending</option>
+                       <option>Paid</option>
+                     </select>
+                   </div>
+                 </div>
+                 
+                 {paymentStatus === 'Paid' && (
+                   <div>
+                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Payment Ref (e.g. M-Pesa Code)</label>
+                     <input type="text" value={paymentRef} onChange={e => setPaymentRef(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]"/>
+                   </div>
+                 )}
+                 
+                 <div>
+                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Notes</label>
+                   <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB] resize-none"/>
+                 </div>
+                 
+                 <div className="bg-gray-50 p-4 rounded-xl flex justify-between items-center border border-gray-200 mt-4">
+                    <span className="font-bold text-gray-600">Total Purchase Cost:</span>
+                    <span className="text-xl font-black text-[#0D1117]">KES {cart.reduce((acc, c) => acc + (c.quantity * c.costPrice), 0).toLocaleString()}</span>
+                 </div>
+               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
-              <button onClick={() => setShowReceiveModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-              <button onClick={handleReceive} className="px-5 py-2 bg-[#10B981] hover:bg-emerald-600 text-white text-sm font-medium rounded-lg transition-colors">Record Received Goods</button>
+            
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end flex-shrink-0 bg-gray-50 rounded-b-2xl">
+              <button onClick={closeModals} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+              <button onClick={handleReceiveGoods} className="px-6 py-2 bg-[#10B981] hover:bg-[#059669] text-white text-sm font-bold rounded-lg transition-colors shadow-sm">
+                Confirm & Receive
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Dispatch Goods Modal */}
+      {/* DISPATCH MODAL */}
       {showDispatchModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
-            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center"><Truck className="w-5 h-5 text-[#F59E0B]" /></div>
-                <h2 className="text-lg font-bold text-[#0D1117]">Dispatch Goods</h2>
-              </div>
-              <button onClick={() => setShowDispatchModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400"><X size={18} /></button>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 flex-shrink-0">
+              <h2 className="text-lg font-bold text-[#0D1117] flex items-center gap-2"><ArrowUp className="text-red-500 w-5 h-5"/> Dispatch Goods (Stock Out)</h2>
+              <button onClick={closeModals} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors"><X className="w-5 h-5" /></button>
             </div>
-            <div className="px-6 py-5 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Product *</label>
-                <select value={dispatchForm.productId} onChange={e => setDispatchForm(f => ({...f, productId: e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB] bg-white">
-                  <option value="">-- Select Product --</option>
-                  {products.map(p => (
-                    <option key={p.id} value={p.id}>{p.name} (Available: {p.stock})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Quantity to Dispatch *</label>
-                  <input type="number" value={dispatchForm.qty} onChange={e => setDispatchForm(f => ({...f, qty: e.target.value}))} placeholder="0" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-                  {dispatchForm.productId && (
-                    <p className="text-xs text-gray-400 mt-1">Max: {products.find(p => p.id === dispatchForm.productId)?.stock || 0} units</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1.5">Date</label>
-                  <input type="date" value={dispatchForm.date} onChange={e => setDispatchForm(f => ({...f, date: e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Destination (Branch / Customer)</label>
-                <input value={dispatchForm.destination} onChange={e => setDispatchForm(f => ({...f, destination: e.target.value}))} placeholder="e.g. Westlands Branch, John Kamau" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Reason</label>
-                <select value={dispatchForm.reason} onChange={e => setDispatchForm(f => ({...f, reason: e.target.value}))} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB] bg-white">
-                  <option value="Sale">Sale</option>
-                  <option value="Transfer to Branch">Transfer to Branch</option>
-                  <option value="Return to Supplier">Return to Supplier</option>
-                  <option value="Damaged/Expired">Damaged / Expired</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Dispatch Reference</label>
-                <input value={dispatchForm.ref} onChange={e => setDispatchForm(f => ({...f, ref: e.target.value}))} placeholder="DSP-001" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1.5">Notes</label>
-                <textarea value={dispatchForm.notes} onChange={e => setDispatchForm(f => ({...f, notes: e.target.value}))} rows={2} placeholder="Any additional notes..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB] resize-none" />
-              </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 flex flex-col lg:flex-row gap-6">
+               <div className="w-full lg:w-1/2 space-y-4 border-r border-gray-100 pr-0 lg:pr-6">
+                 <div>
+                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Search Products to Dispatch</label>
+                   <select onChange={(e) => {
+                     const p = products.find(p => p.id === e.target.value);
+                     if(p) addToCart(p);
+                     e.target.value = "";
+                   }} className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:border-[#2563EB] bg-gray-50">
+                     <option value="">Select a product...</option>
+                     {products.map(p => <option key={p.id} value={p.id}>{p.name} (Avail: {p.stock || 0})</option>)}
+                   </select>
+                 </div>
+                 
+                 <div className="border border-gray-200 rounded-xl overflow-hidden">
+                   <div className="bg-gray-50 px-4 py-2 text-xs font-bold text-gray-500 uppercase tracking-wider border-b border-gray-200">Dispatch Cart</div>
+                   <div className="max-h-60 overflow-y-auto p-2 space-y-2">
+                     {cart.map((c, i) => (
+                       <div key={i} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-lg shadow-sm">
+                         <div className="flex-1 min-w-0">
+                           <div className="font-bold text-sm text-[#0D1117] truncate">{c.name}</div>
+                           <div className="text-[10px] text-gray-500">Available: {c.stock}</div>
+                         </div>
+                         <div className="w-24">
+                           <input type="number" min="1" max={c.stock} value={c.quantity} onChange={(e) => updateCartQty(c.id, Number(e.target.value))} className="w-full border border-gray-200 rounded px-2 py-1 text-sm text-center"/>
+                         </div>
+                         <button onClick={() => removeCartItem(c.id)} className="text-red-400 hover:text-red-600"><Trash2 className="w-4 h-4"/></button>
+                       </div>
+                     ))}
+                     {cart.length === 0 && <div className="text-center py-4 text-sm text-gray-400">Select products above to add to cart.</div>}
+                   </div>
+                 </div>
+               </div>
+               
+               <div className="w-full lg:w-1/2 space-y-4">
+                 <div>
+                    <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Reason</label>
+                    <select value={reason} onChange={e => setReason(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]">
+                      <option>Sale</option>
+                      <option>Transfer to Branch</option>
+                      <option>Return to Supplier</option>
+                      <option>Damaged / Expired</option>
+                      <option>Other</option>
+                    </select>
+                 </div>
+                 
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Destination</label>
+                     <input type="text" value={destination} onChange={e => setDestination(e.target.value)} placeholder="e.g. Branch B" className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]"/>
+                   </div>
+                   <div>
+                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Reference</label>
+                     <input type="text" value={reference} onChange={e => setReference(e.target.value)} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]"/>
+                   </div>
+                 </div>
+                 
+                 <div>
+                   <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Notes</label>
+                   <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB] resize-none"/>
+                 </div>
+               </div>
             </div>
-            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
-              <button onClick={() => setShowDispatchModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-              <button onClick={handleDispatch} className="px-5 py-2 bg-[#F59E0B] hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors">Record Dispatch</button>
+            
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end flex-shrink-0 bg-gray-50 rounded-b-2xl">
+              <button onClick={closeModals} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-200 rounded-lg transition-colors">Cancel</button>
+              <button onClick={handleDispatchGoods} className="px-6 py-2 bg-[#0D1117] hover:bg-black text-white text-sm font-bold rounded-lg transition-colors shadow-sm">
+                Confirm Dispatch
+              </button>
             </div>
           </div>
         </div>

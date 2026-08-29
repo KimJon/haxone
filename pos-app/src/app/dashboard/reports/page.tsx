@@ -120,20 +120,24 @@ function ReportCardItem({ card }: { card: ReportCard }) {
         <h3 className="text-sm font-semibold text-[#0D1117]">{card.title}</h3>
         <p className="text-xs text-gray-500 mt-1 leading-relaxed">{card.description}</p>
       </div>
-      <div className="flex gap-2 mt-1">
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="flex items-center gap-1.5 flex-1 justify-center bg-[#2563EB] hover:bg-blue-700 disabled:opacity-70 text-white px-3 py-2 rounded-lg text-xs font-medium transition-colors"
-        >
-          <RefreshCw size={12} className={generating ? 'animate-spin' : ''} />
-          {generating ? 'Generating…' : 'Generate'}
-        </button>
-        <button className="flex items-center gap-1.5 flex-1 justify-center border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-lg text-xs font-medium transition-colors">
-          <Download size={12} />
-          Download PDF
-        </button>
-      </div>
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={() => {
+              setGenerating(true);
+              setTimeout(() => setGenerating(false), 800);
+            }}
+            className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+          >
+            {generating ? 'Generating...' : 'Generate'}
+          </button>
+          <button 
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 flex-1 justify-center border border-gray-200 hover:bg-gray-50 text-gray-600 px-3 py-2 rounded-lg text-xs font-medium transition-colors"
+          >
+            <Download size={12} />
+            Download PDF
+          </button>
+        </div>
     </div>
   );
 }

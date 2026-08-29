@@ -24,29 +24,6 @@ interface ChatMessage {
   time: string;
 }
 
-const alertCards = [
-  {
-    type: 'error', icon: AlertTriangle, title: 'Critical Stock Alert',
-    desc: 'Unga wa Dola 2kg is at 8 units in Nairobi CBD — estimated stockout in 2 days.',
-    action: 'Reorder Now', bg: '#FEF2F2', border: '#FCA5A5', color: '#DC2626', iconBg: '#FEE2E2',
-  },
-  {
-    type: 'warning', icon: TrendingDown, title: 'Sales Dip Detected',
-    desc: 'Wednesday revenue dropped 14% vs last week average. Possible cause: school term end.',
-    action: 'View Report', bg: '#FFFBEB', border: '#FCD34D', color: '#D97706', iconBg: '#FEF3C7',
-  },
-  {
-    type: 'success', icon: TrendingUp, title: 'Bestseller Trending',
-    desc: 'Indomie Noodles sales up 38% this week. Consider expanding stock and promoting.',
-    action: 'View Trend', bg: '#F0FDF4', border: '#86EFAC', color: '#16A34A', iconBg: '#DCFCE7',
-  },
-  {
-    type: 'info', icon: Clock, title: 'Peak Hour Insight',
-    desc: 'Your busiest hours are 6–8 PM daily. Ensure full staff coverage during this window.',
-    action: 'Adjust Shifts', bg: '#EFF6FF', border: '#93C5FD', color: '#2563EB', iconBg: '#DBEAFE',
-  },
-];
-
 const recommendations = [
   {
     icon: Package, color: '#DC2626', bg: '#FEE2E2', title: 'Reorder Now',

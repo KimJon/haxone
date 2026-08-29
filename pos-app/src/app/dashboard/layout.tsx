@@ -3,11 +3,23 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LayoutDashboard, ShoppingCart, Users, Package, Settings, LogOut, TerminalSquare, Box, Truck, Receipt, Calculator, FileText, MapPin, Search, Bell, Brain, ChevronDown, Store, X } from 'lucide-react';
 import { Logo } from '@/components/Logo';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [activeStore, setActiveStore] = useState<any>({ name: 'My Store', location: 'Main Branch' });
+  const [activeUser, setActiveUser] = useState<any>({ name: 'Admin', role: 'Manager' });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const store = JSON.parse(localStorage.getItem('haxone_active_store') || 'null');
+      if (store) setActiveStore(store);
+      
+      const user = JSON.parse(localStorage.getItem('haxone_active_user') || 'null');
+      if (user) setActiveUser(user);
+    }
+  }, []);
   
   const navSections = [
     {
@@ -71,10 +83,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Store Switcher */}
         <div className="px-3 py-3 border-b border-white/10 flex-shrink-0">
           <button className="w-full flex items-center gap-3 px-3 py-2.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-left">
-            <div className="w-7 h-7 rounded-md bg-[#2563EB] flex items-center justify-center text-xs font-bold flex-shrink-0">S</div>
+            <div className="w-7 h-7 rounded-md bg-[#2563EB] flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {activeStore.name.charAt(0).toUpperCase()}
+            </div>
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-bold text-white truncate">Sunrise Supermarket</div>
-              <div className="text-xs text-gray-500">Nairobi CBD</div>
+              <div className="text-xs font-bold text-white truncate">{activeStore.name}</div>
+              <div className="text-xs text-gray-500">{activeStore.location || 'Main Branch'}</div>
             </div>
             <ChevronDown className="w-4 h-4 text-gray-500 flex-shrink-0" />
           </button>
@@ -113,12 +127,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         <div className="p-3 border-t border-white/10 flex-shrink-0 space-y-1">
-          <Link href="/" className="flex items-center px-3 py-2.5 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white cursor-pointer transition-colors text-sm font-medium">
-            <Store className="w-4 h-4 mr-3 text-gray-500" />
-            View Store
-          </Link>
-          <button className="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-400 hover:bg-red-500/10 hover:text-red-400 cursor-pointer transition-colors text-sm font-medium">
-            <LogOut className="w-4 h-4 mr-3 text-gray-500" />
+          <button 
+            onClick={() => {
+              if (typeof window !== 'undefined') localStorage.removeItem('haxone_active_user');
+              window.location.href = '/login';
+            }} 
+            className="w-full flex items-center px-3 py-2.5 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white cursor-pointer transition-colors text-sm font-medium"
+          >
+            <LogOut className="w-4 h-4 mr-3 flex-shrink-0" />
             Log Out
           </button>
         </div>
@@ -158,11 +174,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             
             <div className="flex items-center gap-2.5 cursor-pointer border-l border-gray-200 pl-4">
               <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#2563EB] to-[#7C3AED] text-white flex items-center justify-center font-bold text-sm shadow-sm">
-                JK
+                {activeUser.name.charAt(0).toUpperCase()}
               </div>
               <div className="hidden md:block">
-                <div className="text-sm font-bold text-[#0D1117]">John Kamau</div>
-                <div className="text-xs text-gray-500">Admin</div>
+                <div className="text-sm font-bold text-[#0D1117]">{activeUser.name}</div>
+                <div className="text-xs text-gray-500">{activeUser.role || 'Staff'}</div>
               </div>
             </div>
           </div>

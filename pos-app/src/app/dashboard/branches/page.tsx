@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import {
@@ -46,6 +46,7 @@ function formatKES(n: number) {
 export default function BranchesPage() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [showModal, setShowModal] = useState(false);
+  const [viewBranch, setViewBranch] = useState<Branch | null>(null);
   const [form, setForm] = useState({ name: '', address: '', city: '', manager: '', phone: '', region: '' });
 
   useEffect(() => {
@@ -154,10 +155,50 @@ export default function BranchesPage() {
               </div>
               <div style={{ padding: '14px 22px', display: 'flex', gap: '10px' }}>
                 <button onClick={() => handleDeleteBranch(branch.id)} style={{ flex: 1, padding: '9px', border: '1.5px solid #FCA5A5', borderRadius: '10px', background: '#FEF2F2', color: '#DC2626', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Trash2 size={13} /> Delete</button>
-                <button style={{ flex: 2, padding: '9px', border: 'none', borderRadius: '10px', background: branch.color, color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: `0 2px 8px ${branch.color}40` }}><Eye size={13} /> View Details</button>
+                <button onClick={() => setViewBranch(branch)} style={{ flex: 2, padding: '9px', border: 'none', borderRadius: '10px', background: branch.color, color: '#fff', fontWeight: 600, fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: `0 2px 8px ${branch.color}40` }}><Eye size={13} /> View Details</button>
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {viewBranch && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }} onClick={() => setViewBranch(null)}>
+          <div style={{ background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '500px', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '24px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0D1117' }}>Branch Details</h2>
+              </div>
+              <button onClick={() => setViewBranch(null)} style={{ background: '#F3F4F6', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex' }}><X size={16} color="#6B7280" /></button>
+            </div>
+            <div style={{ padding: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: viewBranch.bg, color: viewBranch.color, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Building2 size={24} /></div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0D1117' }}>{viewBranch.name}</h3>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#6B7280' }}>{viewBranch.address}</p>
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                <div style={{ background: '#F3F4F6', padding: '12px', borderRadius: '10px' }}>
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Manager</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#0D1117' }}>{viewBranch.manager}</div>
+                </div>
+                <div style={{ background: '#F3F4F6', padding: '12px', borderRadius: '10px' }}>
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Staff Count</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#0D1117' }}>{viewBranch.staffCount}</div>
+                </div>
+                <div style={{ background: '#F3F4F6', padding: '12px', borderRadius: '10px' }}>
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Phone</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: '#0D1117' }}>{viewBranch.phone || 'N/A'}</div>
+                </div>
+                <div style={{ background: '#F3F4F6', padding: '12px', borderRadius: '10px' }}>
+                  <div style={{ fontSize: '12px', color: '#6B7280', marginBottom: '4px' }}>Status</div>
+                  <div style={{ fontSize: '14px', fontWeight: 600, color: viewBranch.status === 'Active' ? '#10B981' : '#6B7280' }}>{viewBranch.status}</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

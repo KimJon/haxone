@@ -1,270 +1,220 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
-import {
-  Users,
-  UserCheck,
-  Coffee,
-  ShoppingCart,
-  Plus,
-  Search,
-  Filter,
-  MoreVertical,
-  Edit2,
-  Trash2,
-  Phone,
-  Mail,
-  MapPin,
-  X,
-  Eye,
-  EyeOff,
-  ChevronDown,
-} from 'lucide-react';
+import { Users, UserCheck, Plus, Search, MoreVertical, Edit2, Trash2, X, Eye, EyeOff, Shield } from 'lucide-react';
 
 interface Employee {
-  id: number;
+  id: string;
   name: string;
-  role: 'Manager' | 'Cashier' | 'Stock Clerk';
+  role: string;
   phone: string;
   email: string;
   branch: string;
-  shift: string;
-  salesToday: number;
-  status: 'Active' | 'On Leave' | 'Inactive';
-  username: string;
+  status: 'Active' | 'Inactive';
+  pin: string;
   initials: string;
   color: string;
   permissions?: string[];
 }
 
-const colors = ['#2563EB', '#7C3AED', '#16A34A', '#D97706', '#DC2626', '#0891B2', '#4F46E5', '#DB2777'];
+const MODULES = [
+  'POS Terminal', 'Sales History', 'Products', 'Inventory', 
+  'Customers', 'Suppliers', 'Expenses', 'Reports', 'Settings', 'Employees'
+];
 
 export default function EmployeesPage() {
-  const [search, setSearch] = useState('');
-  const [showModal, setShowModal] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({ name: '', role: 'Cashier', phone: '', email: '', branch: 'Nairobi CBD', username: '', password: '', permissions: [] as string[] });
-  const [activeMenu, setActiveMenu] = useState<number | null>(null);
-  const [employeeList, setEmployeeList] = useState<Employee[]>([]);
-
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [activeStore, setActiveStore] = useState<any>(null);
+  
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      try {
-        const stored = localStorage.getItem('haxone_employees');
-        if (stored) setEmployeeList(JSON.parse(stored));
-      } catch (e) {}
+      const stored = JSON.parse(localStorage.getItem('haxone_employees') || '[]');
+      setEmployees(stored);
+      
+      const store = JSON.parse(localStorage.getItem('haxone_active_store') || 'null');
+      setActiveStore(store);
     }
   }, []);
 
-  const saveEmployees = (list: Employee[]) => {
-    setEmployeeList(list);
-    try { localStorage.setItem('haxone_employees', JSON.stringify(list)); } catch {}
-  };
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  
+  const [formData, setFormData] = useState<Partial<Employee>>({
+    name: '', role: 'Cashier', phone: '', email: '', branch: '', status: 'Active', pin: '', permissions: []
+  });
+  const [showPin, setShowPin] = useState(false);
 
-  const handleAddEmployee = () => {
-    if (!form.name || !form.phone || !form.username) {
-      alert('Please fill in Name, Phone, and Username.');
-      return;
-    }
-    const initials = form.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-    const newEmp: Employee = {
-      id: Date.now(),
-      name: form.name,
-      role: form.role as Employee['role'],
-      phone: form.phone,
-      email: form.email,
-      branch: form.branch,
-      shift: 'Morning',
-      salesToday: 0,
-      status: 'Active',
-      username: form.username,
-      initials,
-      color: colors[employeeList.length % colors.length],
-      permissions: form.permissions,
-    };
-    saveEmployees([...employeeList, newEmp]);
-    setForm({ name: '', role: 'Cashier', phone: '', email: '', branch: 'Nairobi CBD', username: '', password: '', permissions: [] });
-    setShowModal(false);
-  };
-
-  const handleDeleteEmployee = (id: number) => {
-    if (confirm('Are you sure you want to remove this employee?')) {
-      saveEmployees(employeeList.filter(e => e.id !== id));
-    }
-    setActiveMenu(null);
-  };
-
-  const activeCount = employeeList.filter(e => e.status === 'Active').length;
-  const leaveCount = employeeList.filter(e => e.status === 'On Leave').length;
-  const cashierCount = employeeList.filter(e => e.role === 'Cashier').length;
-
-  const statCards = [
-    { label: 'Total Staff', value: employeeList.length, icon: Users, color: '#2563EB', bg: '#EFF6FF' },
-    { label: 'Active', value: activeCount, icon: UserCheck, color: '#16A34A', bg: '#F0FDF4' },
-    { label: 'On Leave', value: leaveCount, icon: Coffee, color: '#D97706', bg: '#FFFBEB' },
-    { label: 'Cashiers', value: cashierCount, icon: ShoppingCart, color: '#7C3AED', bg: '#F5F3FF' },
-  ];
-
-  const filtered = employeeList.filter(e =>
-    e.name.toLowerCase().includes(search.toLowerCase()) ||
-    e.role.toLowerCase().includes(search.toLowerCase()) ||
-    e.branch.toLowerCase().includes(search.toLowerCase())
+  const filteredEmployees = employees.filter(emp => 
+    emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    emp.role.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const roleBadge: Record<string, { bg: string; text: string }> = {
-    Manager: { bg: '#EFF6FF', text: '#2563EB' },
-    Cashier: { bg: '#F0FDF4', text: '#16A34A' },
-    'Stock Clerk': { bg: '#F5F3FF', text: '#7C3AED' },
+  const getInitials = (name: string) => name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+  const handleSave = () => {
+    if (!formData.name || !formData.pin || formData.pin.length !== 4) {
+      alert("Name and a 4-digit PIN are required.");
+      return;
+    }
+
+    let updatedList;
+    if (editingId) {
+      updatedList = employees.map(emp => 
+        emp.id === editingId ? { ...emp, ...formData } as Employee : emp
+      );
+    } else {
+      const newEmployee: Employee = {
+        ...(formData as Employee),
+        id: `EMP-${Math.floor(Math.random()*10000)}`,
+        initials: getInitials(formData.name || ''),
+        color: ['#2563EB', '#7C3AED', '#10B981', '#F59E0B'][Math.floor(Math.random() * 4)],
+        branch: formData.branch || (activeStore ? activeStore.location : 'Main Branch')
+      };
+      updatedList = [newEmployee, ...employees];
+    }
+
+    setEmployees(updatedList);
+    if (typeof window !== 'undefined') localStorage.setItem('haxone_employees', JSON.stringify(updatedList));
+    
+    setShowAddModal(false);
+    setEditingId(null);
+    setFormData({ name: '', role: 'Cashier', phone: '', email: '', branch: '', status: 'Active', pin: '', permissions: [] });
   };
 
-  const statusBadge: Record<string, { bg: string; text: string }> = {
-    Active: { bg: '#F0FDF4', text: '#16A34A' },
-    'On Leave': { bg: '#FFFBEB', text: '#D97706' },
-    Inactive: { bg: '#FEF2F2', text: '#DC2626' },
+  const handleDelete = (id: string) => {
+    if (confirm("Are you sure you want to remove this employee?")) {
+      const updatedList = employees.filter(e => e.id !== id);
+      setEmployees(updatedList);
+      if (typeof window !== 'undefined') localStorage.setItem('haxone_employees', JSON.stringify(updatedList));
+    }
+  };
+
+  const openEdit = (emp: Employee) => {
+    setFormData(emp);
+    setEditingId(emp.id);
+    setShowAddModal(true);
+  };
+
+  const togglePermission = (mod: string) => {
+    const current = formData.permissions || [];
+    if (current.includes(mod)) {
+      setFormData({ ...formData, permissions: current.filter(m => m !== mod) });
+    } else {
+      setFormData({ ...formData, permissions: [...current, mod] });
+    }
   };
 
   return (
-    <div style={{ background: '#F3F4F6', minHeight: '100vh', fontFamily: "'Inter', sans-serif", padding: '32px' }}>
+    <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '28px' }}>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#0D1117', margin: 0 }}>Employees</h1>
-          <p style={{ color: '#6B7280', marginTop: '4px', fontSize: '14px' }}>Manage your team across all branches</p>
+          <h1 className="text-2xl font-bold text-[#0D1117]">Staff & Users</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage POS access, PIN codes, and permissions.</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            background: '#2563EB', color: '#fff', border: 'none', borderRadius: '10px',
-            padding: '10px 20px', fontWeight: 600, fontSize: '14px', cursor: 'pointer',
-            display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 2px 8px rgba(37,99,235,0.3)',
-            transition: 'all 0.2s',
+        <button 
+          onClick={() => {
+            setEditingId(null);
+            setFormData({ name: '', role: 'Cashier', phone: '', email: '', branch: '', status: 'Active', pin: '', permissions: [] });
+            setShowAddModal(true);
           }}
+          className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors"
         >
-          <Plus size={16} /> Add Employee
+          <Plus className="w-4 h-4" />
+          Add Employee
         </button>
       </div>
 
-      {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        {statCards.map(card => (
-          <div key={card.label} style={{
-            background: '#fff', borderRadius: '16px', padding: '20px',
-            boxShadow: '0 1px 4px rgba(0,0,0,0.06)', display: 'flex', alignItems: 'center', gap: '16px',
-          }}>
-            <div style={{ background: card.bg, borderRadius: '12px', padding: '12px', display: 'flex' }}>
-              <card.icon size={22} color={card.color} />
-            </div>
-            <div>
-              <p style={{ fontSize: '26px', fontWeight: 700, color: '#0D1117', margin: 0 }}>{card.value}</p>
-              <p style={{ fontSize: '13px', color: '#6B7280', margin: 0 }}>{card.label}</p>
-            </div>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-2 gap-4">
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center">
+            <Users className="w-6 h-6 text-[#2563EB]" />
           </div>
-        ))}
+          <div>
+            <div className="text-sm font-medium text-gray-500">Total Staff</div>
+            <div className="text-2xl font-bold text-[#0D1117]">{employees.length}</div>
+          </div>
+        </div>
+        <div className="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+            <UserCheck className="w-6 h-6 text-[#10B981]" />
+          </div>
+          <div>
+            <div className="text-sm font-medium text-gray-500">Active Now</div>
+            <div className="text-2xl font-bold text-[#0D1117]">{employees.filter(e => e.status === 'Active').length}</div>
+          </div>
+        </div>
       </div>
 
-      {/* Table Card */}
-      <div style={{ background: '#fff', borderRadius: '16px', boxShadow: '0 1px 4px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
-        {/* Table Toolbar */}
-        <div style={{ padding: '20px 24px', borderBottom: '1px solid #F3F4F6', display: 'flex', gap: '12px', alignItems: 'center' }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: '360px' }}>
-            <Search size={16} color="#9CA3AF" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search employees..."
-              style={{
-                width: '100%', border: '1.5px solid #E5E7EB', borderRadius: '10px',
-                padding: '9px 12px 9px 38px', fontSize: '14px', color: '#0D1117',
-                outline: 'none', background: '#FAFAFA', boxSizing: 'border-box',
-              }}
+      {/* Employee List */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="p-4 border-b border-gray-100 flex flex-col sm:flex-row gap-4 justify-between">
+          <div className="relative w-full sm:w-96">
+            <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input 
+              type="text" 
+              placeholder="Search employees..." 
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="w-full bg-gray-50 border border-gray-200 rounded-lg pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB] transition-colors"
             />
           </div>
-          <button style={{
-            border: '1.5px solid #E5E7EB', background: '#fff', borderRadius: '10px',
-            padding: '9px 16px', fontSize: '14px', cursor: 'pointer', display: 'flex',
-            alignItems: 'center', gap: '6px', color: '#374151', fontWeight: 500,
-          }}>
-            <Filter size={15} /> Filter
-          </button>
         </div>
-
-        {/* Table */}
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+        
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
             <thead>
-              <tr style={{ background: '#F9FAFB' }}>
-                {['Employee', 'Role', 'Contact', 'Branch', 'Shift', 'Sales Today', 'Status', 'Actions'].map(h => (
-                  <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 600, color: '#6B7280', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #F3F4F6' }}>{h}</th>
-                ))}
+              <tr className="border-b border-gray-100 bg-gray-50/70">
+                <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Employee</th>
+                <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Role & Branch</th>
+                <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Status</th>
+                <th className="text-left px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">PIN Code</th>
+                <th className="text-right px-5 py-4 font-semibold text-gray-600 text-xs uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
-            <tbody>
-              {filtered.map((emp, idx) => (
-                <tr key={emp.id} style={{ borderBottom: '1px solid #F9FAFB', transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#FAFAFA')}
-                  onMouseLeave={e => (e.currentTarget.style.background = '#fff')}>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '38px', height: '38px', borderRadius: '50%', background: emp.color,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        color: '#fff', fontWeight: 700, fontSize: '13px', flexShrink: 0,
-                      }}>{emp.initials}</div>
+            <tbody className="divide-y divide-gray-50">
+              {filteredEmployees.map(emp => (
+                <tr key={emp.id} className="hover:bg-gray-50/50 transition-colors">
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      <div 
+                        className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm"
+                        style={{ backgroundColor: emp.color }}
+                      >
+                        {emp.initials}
+                      </div>
                       <div>
-                        <p style={{ fontWeight: 600, color: '#0D1117', margin: 0 }}>{emp.name}</p>
-                        <p style={{ fontSize: '12px', color: '#9CA3AF', margin: 0 }}>@{emp.username}</p>
+                        <div className="font-bold text-[#0D1117]">{emp.name}</div>
+                        <div className="text-xs text-gray-500 mt-0.5">{emp.phone || emp.email || 'No contact info'}</div>
                       </div>
                     </div>
                   </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{
-                      background: roleBadge[emp.role].bg, color: roleBadge[emp.role].text,
-                      padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
-                    }}>{emp.role}</span>
+                  <td className="px-5 py-4">
+                    <div className="font-semibold text-gray-700">{emp.role}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{emp.branch}</div>
                   </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                      <span style={{ color: '#374151', display: 'flex', alignItems: 'center', gap: '5px' }}><Phone size={12} color="#9CA3AF" />{emp.phone}</span>
-                      <span style={{ color: '#9CA3AF', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}><Mail size={12} color="#9CA3AF" />{emp.email}</span>
-                    </div>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#374151' }}>
-                      <MapPin size={13} color="#9CA3AF" />{emp.branch}
+                  <td className="px-5 py-4">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
+                      emp.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      {emp.status}
                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px', color: '#374151' }}>{emp.shift}</td>
-                  <td style={{ padding: '14px 16px', fontWeight: 600, color: '#0D1117' }}>
-                    {emp.salesToday > 0 ? `KES ${emp.salesToday.toLocaleString()}` : <span style={{ color: '#D1D5DB' }}>—</span>}
+                  <td className="px-5 py-4">
+                     <span className="font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                       {emp.pin ? '****' : 'Not Set'}
+                     </span>
                   </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <span style={{
-                      background: statusBadge[emp.status].bg, color: statusBadge[emp.status].text,
-                      padding: '4px 10px', borderRadius: '20px', fontSize: '12px', fontWeight: 600,
-                    }}>{emp.status}</span>
-                  </td>
-                  <td style={{ padding: '14px 16px' }}>
-                    <div style={{ position: 'relative' }}>
-                      <button
-                        onClick={() => setActiveMenu(activeMenu === emp.id ? null : emp.id)}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}
-                      >
-                        <MoreVertical size={16} color="#9CA3AF" />
+                  <td className="px-5 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <button onClick={() => openEdit(emp)} className="p-1.5 text-gray-400 hover:text-[#2563EB] hover:bg-blue-50 rounded-lg transition-colors">
+                        <Edit2 className="w-4 h-4" />
                       </button>
-                      {activeMenu === emp.id && (
-                        <div style={{
-                          position: 'absolute', right: 0, top: '28px', zIndex: 100,
-                          background: '#fff', borderRadius: '10px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                          border: '1px solid #F3F4F6', minWidth: '140px', overflow: 'hidden',
-                        }}>
-                          <button onClick={() => setActiveMenu(null)} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#374151' }}>
-                            <Edit2 size={13} /> Edit Employee
-                          </button>
-                          <button onClick={() => handleDeleteEmployee(emp.id)} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#DC2626' }}>
-                            <Trash2 size={13} /> Remove
-                          </button>
-                        </div>
-                      )}
+                      <button onClick={() => handleDelete(emp.id)} className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -272,125 +222,134 @@ export default function EmployeesPage() {
             </tbody>
           </table>
         </div>
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>Showing {filtered.length} of {employeeList.length} employees</p>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {[1, 2].map(n => (
-              <button key={n} style={{ width: '32px', height: '32px', borderRadius: '8px', border: n === 1 ? 'none' : '1px solid #E5E7EB', background: n === 1 ? '#2563EB' : '#fff', color: n === 1 ? '#fff' : '#374151', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>{n}</button>
-            ))}
-          </div>
-        </div>
       </div>
 
-      {/* Add Employee Modal */}
-      {showModal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px',
-        }} onClick={() => setShowModal(false)}>
-          <div style={{
-            background: '#fff', borderRadius: '20px', width: '100%', maxWidth: '520px',
-            boxShadow: '0 24px 64px rgba(0,0,0,0.18)', overflow: 'hidden',
-          }} onClick={e => e.stopPropagation()}>
-            <div style={{ padding: '24px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#0D1117' }}>Add New Employee</h2>
-                <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#9CA3AF' }}>Fill in the details below</p>
-              </div>
-              <button onClick={() => setShowModal(false)} style={{ background: '#F3F4F6', border: 'none', borderRadius: '8px', padding: '8px', cursor: 'pointer', display: 'flex' }}>
-                <X size={16} color="#6B7280" />
+      {/* Add/Edit Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100 sticky top-0 bg-white z-10">
+              <h2 className="text-lg font-bold text-[#0D1117]">{editingId ? 'Edit Employee' : 'Add New Employee'}</h2>
+              <button onClick={() => setShowAddModal(false)} className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
+                <X className="w-5 h-5" />
               </button>
             </div>
-            <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              {[
-                { label: 'Full Name', key: 'name', type: 'text', placeholder: 'e.g. Jane Wanjiru', span: 2 },
-                { label: 'Phone Number', key: 'phone', type: 'tel', placeholder: '+254 7XX XXX XXX', span: 1 },
-                { label: 'Email Address', key: 'email', type: 'email', placeholder: 'jane@haxone.co.ke', span: 1 },
-                { label: 'Username', key: 'username', type: 'text', placeholder: 'e.g. jwanjiru', span: 1 },
-              ].map(f => (
-                <div key={f.key} style={{ gridColumn: f.span === 2 ? 'span 2' : 'span 1' }}>
-                  <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>{f.label}</label>
-                  <input
-                    type={f.type}
-                    placeholder={f.placeholder}
-                    value={(form as any)[f.key]}
-                    onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                    style={{ width: '100%', border: '1.5px solid #E5E7EB', borderRadius: '10px', padding: '10px 12px', fontSize: '14px', color: '#0D1117', outline: 'none', boxSizing: 'border-box', background: '#FAFAFA' }}
-                  />
-                </div>
-              ))}
-              {/* Role */}
+            
+            <div className="px-6 py-5 space-y-6">
+              {/* Profile Details */}
               <div>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>Role</label>
-                <div style={{ position: 'relative' }}>
-                  <select value={form.role} onChange={e => setForm(p => ({ ...p, role: e.target.value }))}
-                    style={{ width: '100%', border: '1.5px solid #E5E7EB', borderRadius: '10px', padding: '10px 36px 10px 12px', fontSize: '14px', color: '#0D1117', outline: 'none', background: '#FAFAFA', appearance: 'none', cursor: 'pointer' }}>
-                    <option>Manager</option>
-                    <option>Cashier</option>
-                    <option>Stock Clerk</option>
-                  </select>
-                  <ChevronDown size={15} color="#9CA3AF" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2"><UserCheck className="w-4 h-4" /> Profile Details</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Full Name *</label>
+                    <input 
+                      type="text" 
+                      value={formData.name}
+                      onChange={e => setFormData({...formData, name: e.target.value})}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#2563EB]/20 focus:border-[#2563EB]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Role *</label>
+                    <select 
+                      value={formData.role}
+                      onChange={e => setFormData({...formData, role: e.target.value})}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]"
+                    >
+                      <option>Admin</option>
+                      <option>Manager</option>
+                      <option>Cashier</option>
+                      <option>Stock Clerk</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Phone Number</label>
+                    <input 
+                      type="text" 
+                      value={formData.phone}
+                      onChange={e => setFormData({...formData, phone: e.target.value})}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Branch</label>
+                    <input 
+                      type="text" 
+                      value={formData.branch}
+                      placeholder={activeStore ? activeStore.location : "Main Branch"}
+                      onChange={e => setFormData({...formData, branch: e.target.value})}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]"
+                    />
+                  </div>
                 </div>
               </div>
-              {/* Branch */}
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>Branch</label>
-                <div style={{ position: 'relative' }}>
-                  <select value={form.branch} onChange={e => setForm(p => ({ ...p, branch: e.target.value }))}
-                    style={{ width: '100%', border: '1.5px solid #E5E7EB', borderRadius: '10px', padding: '10px 36px 10px 12px', fontSize: '14px', color: '#0D1117', outline: 'none', background: '#FAFAFA', appearance: 'none', cursor: 'pointer' }}>
-                    <option>Nairobi CBD</option>
-                    <option>Westlands</option>
-                    <option>Mombasa Road</option>
-                    <option>Kisumu</option>
-                  </select>
-                  <ChevronDown size={15} color="#9CA3AF" style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
-                </div>
-              </div>
-              {/* Password */}
-              <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '6px' }}>Password</label>
-                <div style={{ position: 'relative' }}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder="Min. 8 characters"
-                    value={form.password}
-                    onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                    style={{ width: '100%', border: '1.5px solid #E5E7EB', borderRadius: '10px', padding: '10px 40px 10px 12px', fontSize: '14px', color: '#0D1117', outline: 'none', background: '#FAFAFA', boxSizing: 'border-box' }}
-                  />
-                  <button onClick={() => setShowPassword(p => !p)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex' }}>
-                    {showPassword ? <EyeOff size={16} color="#9CA3AF" /> : <Eye size={16} color="#9CA3AF" />}
-                  </button>
-                </div>
-              </div>
-              {/* Permissions */}
-              <div style={{ gridColumn: 'span 2', background: '#F9FAFB', padding: '16px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
-                <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '10px' }}>Allowed Modules / Rights</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                  {['POS', 'Sales', 'Products', 'Inventory', 'Customers', 'Suppliers', 'Expenses', 'Accounting', 'Reports', 'Settings', 'Employees'].map(mod => (
-                    <label key={mod} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4B5563', cursor: 'pointer' }}>
+
+              {/* Login Credentials */}
+              <div className="border-t border-gray-100 pt-6">
+                <h3 className="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2"><Shield className="w-4 h-4" /> POS Login Credentials</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">4-Digit PIN Code *</label>
+                    <div className="relative">
                       <input 
-                        type="checkbox"
-                        checked={form.permissions.includes(mod)}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setForm(p => ({
-                            ...p, 
-                            permissions: checked ? [...p.permissions, mod] : p.permissions.filter(m => m !== mod)
-                          }));
-                        }}
+                        type={showPin ? "text" : "password"} 
+                        maxLength={4}
+                        value={formData.pin}
+                        onChange={e => setFormData({...formData, pin: e.target.value.replace(/\D/g, '')})}
+                        placeholder="e.g. 1234"
+                        className="w-full bg-white border border-gray-200 rounded-lg pl-3 pr-10 py-2 text-sm focus:outline-none focus:border-[#2563EB] font-mono tracking-widest"
                       />
-                      {mod}
-                    </label>
-                  ))}
+                      <button 
+                        type="button"
+                        onClick={() => setShowPin(!showPin)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                      >
+                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-1">Used to fast-switch accounts on the POS terminal.</p>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1.5">Status</label>
+                    <select 
+                      value={formData.status}
+                      onChange={e => setFormData({...formData, status: e.target.value as any})}
+                      className="w-full bg-white border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#2563EB]"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Access Rights */}
+              <div className="border-t border-gray-100 pt-6">
+                <h3 className="text-sm font-bold text-gray-800 mb-4">Allowed Modules & Rights</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {MODULES.map(mod => {
+                    const isChecked = formData.permissions?.includes(mod);
+                    return (
+                      <label key={mod} className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        isChecked ? 'border-[#2563EB] bg-blue-50/50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <div className={`w-5 h-5 rounded flex items-center justify-center border transition-colors ${
+                          isChecked ? 'bg-[#2563EB] border-[#2563EB]' : 'bg-white border-gray-300'
+                        }`}>
+                          {isChecked && <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
+                        </div>
+                        <span className={`text-sm font-medium ${isChecked ? 'text-[#2563EB]' : 'text-gray-600'}`}>{mod}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
             </div>
-            <div style={{ padding: '20px 24px', borderTop: '1px solid #F3F4F6', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-              <button onClick={() => setShowModal(false)} style={{ padding: '10px 20px', border: '1.5px solid #E5E7EB', borderRadius: '10px', background: '#fff', color: '#374151', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
-                Cancel
-              </button>
-              <button onClick={handleAddEmployee} style={{ padding: '10px 24px', border: 'none', borderRadius: '10px', background: '#2563EB', color: '#fff', fontWeight: 600, fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
-                Add Employee
+            
+            <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end sticky bottom-0 bg-white rounded-b-2xl">
+              <button onClick={() => setShowAddModal(false)} className="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
+              <button onClick={handleSave} className="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-colors shadow-sm">
+                {editingId ? 'Save Changes' : 'Add Employee'}
               </button>
             </div>
           </div>

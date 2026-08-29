@@ -1,23 +1,66 @@
 "use client";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/Logo";
+import { User, Lock, Store } from "lucide-react";
 
 export default function LoginPage() {
-  const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  const [stores, setStores] = useState<any[]>([]);
+  const [activeStore, setActiveStore] = useState<any>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [pin, setPin] = useState('');
+  const [error, setError] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    // Simulate login
-    setTimeout(() => {
-      router.push('/dashboard');
-    }, 1000);
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const storedStores = JSON.parse(localStorage.getItem('haxone_stores') || '[]');
+      setStores(storedStores);
+      if (storedStores.length > 0) {
+        // For multi-tenant on same device, normally you'd choose.
+        // If there's only one, auto-select it.
+        setActiveStore(storedStores[0]);
+      }
+
+      // Fetch employees for this device (in a real app, this would be scoped to the store)
+      const storedEmployees = JSON.parse(localStorage.getItem('haxone_employees') || '[]');
+      if (storedEmployees.length === 0) {
+        // Fallback demo employee if none exist
+        setEmployees([{ id: 'EMP-01', name: 'Demo Admin', pin: '1234', role: 'Admin' }]);
+      } else {
+        setEmployees(storedEmployees);
+      }
+    }
+  }, []);
+
+  const handlePinInput = (num: string) => {
+    if (pin.length < 4) {
+      setPin(prev => prev + num);
+      setError('');
+    }
   };
+
+  const handleDelete = () => {
+    setPin(prev => prev.slice(0, -1));
+  };
+
+  const handleLogin = () => {
+    if (pin === selectedEmployee.pin) {
+      localStorage.setItem('haxone_active_store', JSON.stringify(activeStore));
+      localStorage.setItem('haxone_active_user', JSON.stringify(selectedEmployee));
+      router.push('/dashboard');
+    } else {
+      setError('Incorrect PIN. Please try again.');
+      setPin('');
+    }
+  };
+
+  useEffect(() => {
+    if (pin.length === 4) {
+      handleLogin();
+    }
+  }, [pin]);
 
   return (
     <div className="min-h-screen bg-[#F5F6FA] flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
@@ -26,112 +69,94 @@ export default function LoginPage() {
       </div>
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-10 px-4 shadow-xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-extrabold text-[#0D1117]">Welcome Back</h2>
-            <p className="text-sm text-gray-500 mt-2">Sign in to your dashboard</p>
-          </div>
-
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-6 text-sm text-blue-800">
-            <strong>Demo Account details:</strong>
-            <div className="mt-1 flex items-center justify-between">
-               <span>Email: <span className="font-mono font-medium">admin@haxone.com</span></span>
-            </div>
-            <div className="mt-1 flex items-center justify-between">
-               <span>Password: <span className="font-mono font-medium">123456</span></span>
-            </div>
-          </div>
-
-          <form className="space-y-6" onSubmit={handleLogin}>
-            
-            <div className="flex bg-gray-50 p-1 rounded-lg mb-6 border border-gray-200">
-               <div className="flex-1 text-center py-2 bg-white rounded-md shadow-sm text-sm font-bold text-[#0D1117] cursor-pointer">Email</div>
-               <div className="flex-1 text-center py-2 text-sm font-medium text-gray-500 cursor-pointer">Phone</div>
-            </div>
-
-            <div>
-              <Label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                Email address
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                required
-                defaultValue="admin@haxone.com"
-                className="w-full bg-white border-gray-300 text-[#0D1117] h-12 focus:ring-[#2563EB] focus:border-[#2563EB]"
-                placeholder="john@sunrise.co.ke"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                defaultValue="123456"
-                className="w-full bg-white border-gray-300 text-[#0D1117] h-12 focus:ring-[#2563EB] focus:border-[#2563EB]"
-                placeholder="••••••••"
-              />
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  id="remember-me"
-                  name="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 text-[#2563EB] focus:ring-[#2563EB] border-gray-300 rounded"
-                />
-                <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Remember me
-                </label>
-              </div>
-
-              <div className="text-sm">
-                <a href="#" className="font-medium text-[#2563EB] hover:text-[#1d4ed8]">
-                  Forgot password?
-                </a>
-              </div>
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-[#2563EB] hover:bg-[#1d4ed8] text-white h-12 rounded-lg font-bold text-base shadow-md shadow-blue-500/20"
-            >
-              {isLoading ? "Signing in..." : "Sign In"}
-            </Button>
-          </form>
-
-          <div className="mt-8">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-3 gap-3">
-              <Button variant="outline" className="w-full bg-white border-gray-300 text-gray-700 hover:bg-gray-50 h-10">
-                G
-              </Button>
-              <Button variant="outline" className="w-full bg-white border-gray-300 text-gray-700 hover:bg-gray-50 h-10">
-                A
-              </Button>
-              <Button variant="outline" className="w-full bg-white border-gray-300 text-gray-700 hover:bg-gray-50 h-10">
-                M
-              </Button>
-            </div>
-          </div>
+        <div className="bg-white py-8 px-4 shadow-xl shadow-gray-200/50 sm:rounded-2xl sm:px-10 border border-gray-100">
           
-          <div className="mt-8 text-center text-sm text-gray-600">
-            Don't have an account? <a href="/setup" className="font-bold text-[#2563EB]">Create store</a>
-          </div>
+          {!activeStore ? (
+            <div className="text-center">
+              <h2 className="text-xl font-bold text-gray-900 mb-2">No Store Configured</h2>
+              <p className="text-gray-500 text-sm mb-6">Please run the setup wizard to register a store.</p>
+              <button onClick={() => router.push('/setup')} className="w-full bg-[#2563EB] text-white py-3 rounded-xl font-bold">
+                Go to Setup
+              </button>
+            </div>
+          ) : !selectedEmployee ? (
+            <div>
+              <div className="text-center mb-6">
+                <h2 className="text-xl font-bold text-[#0D1117]">Welcome to {activeStore.name}</h2>
+                <p className="text-sm text-gray-500 mt-1">Select your profile to continue</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                {employees.map(emp => (
+                  <button 
+                    key={emp.id}
+                    onClick={() => setSelectedEmployee(emp)}
+                    className="flex flex-col items-center p-4 border border-gray-100 rounded-xl hover:border-[#2563EB] hover:bg-blue-50 transition-all"
+                  >
+                    <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                      <User className="w-6 h-6 text-gray-500" />
+                    </div>
+                    <span className="font-bold text-[#0D1117] text-sm">{emp.name}</span>
+                    <span className="text-xs text-gray-400 mt-1">{emp.role}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div className="text-center mb-6 relative">
+                <button 
+                  onClick={() => { setSelectedEmployee(null); setPin(''); setError(''); }}
+                  className="absolute left-0 top-1 text-sm text-[#2563EB] font-medium"
+                >
+                  Back
+                </button>
+                <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <User className="w-6 h-6 text-[#2563EB]" />
+                </div>
+                <h2 className="text-xl font-bold text-[#0D1117]">Enter PIN</h2>
+                <p className="text-sm text-gray-500 mt-1">{selectedEmployee.name}</p>
+              </div>
+
+              <div className="flex justify-center gap-3 mb-6">
+                {[...Array(4)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`w-4 h-4 rounded-full border-2 transition-all ${
+                      i < pin.length ? 'bg-[#2563EB] border-[#2563EB]' : 'bg-gray-50 border-gray-200'
+                    }`}
+                  />
+                ))}
+              </div>
+
+              {error && <p className="text-center text-red-500 text-sm font-medium mb-4">{error}</p>}
+
+              <div className="grid grid-cols-3 gap-3 max-w-[280px] mx-auto">
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9].map(num => (
+                  <button 
+                    key={num}
+                    onClick={() => handlePinInput(num.toString())}
+                    className="h-16 bg-gray-50 hover:bg-gray-100 rounded-2xl text-2xl font-semibold text-[#0D1117] transition-colors"
+                  >
+                    {num}
+                  </button>
+                ))}
+                <div />
+                <button 
+                  onClick={() => handlePinInput('0')}
+                  className="h-16 bg-gray-50 hover:bg-gray-100 rounded-2xl text-2xl font-semibold text-[#0D1117] transition-colors"
+                >
+                  0
+                </button>
+                <button 
+                  onClick={handleDelete}
+                  className="h-16 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm font-bold text-gray-500 transition-colors flex items-center justify-center"
+                >
+                  DEL
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
       </div>
     </div>
