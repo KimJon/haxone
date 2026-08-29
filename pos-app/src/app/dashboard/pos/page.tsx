@@ -124,12 +124,14 @@ export default function POSPage() {
   };
 
   const addToCart = (product: any) => {
+    const itemPrice = Number(product.sellPrice) || Number(product.price) || 0;
+    const itemCost = Number(product.buyPrice) || Number(product.costPrice) || 0;
     setCart(prev => {
       const existing = prev.find(p => p.id === product.id);
       if (existing) {
         return prev.map(p => p.id === product.id ? { ...p, quantity: p.quantity + 1 } : p);
       }
-      return [...prev, { ...product, quantity: 1, price: product.price }];
+      return [...prev, { ...product, quantity: 1, price: itemPrice, costPrice: itemCost }];
     });
   };
 
@@ -213,7 +215,7 @@ export default function POSPage() {
                        <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wider truncate">{p.category || p.id}</div>
                     </div>
                     <div className="mt-2">
-                      <div className="text-sm font-black text-[#0D1117]">KES {(p.price || 0).toLocaleString()}</div>
+                      <div className="text-sm font-black text-[#0D1117]">KES {(Number(p.sellPrice) || Number(p.price) || 0).toLocaleString()}</div>
                     </div>
                   </div>
                 </div>
