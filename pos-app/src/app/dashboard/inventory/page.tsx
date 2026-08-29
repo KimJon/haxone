@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import {
@@ -73,6 +73,16 @@ export default function InventoryPage() {
   const handleReceiveGoods = () => {
     if (cart.length === 0) return alert("Add items to receive");
     
+    let finalSupplier = selectedSupplier;
+    if (newSupplierName) {
+      finalSupplier = newSupplierName;
+      // Auto add to supplier list
+      const newSup = { id: `SUP-${Math.random().toString(36).substr(2,6)}`, name: newSupplierName };
+      const updated = [...suppliers, newSup];
+      setSuppliers(updated);
+      if (typeof window !== 'undefined') localStorage.setItem('haxone_suppliers', JSON.stringify(updated));
+    }
+
     let updatedProducts = [...products];
     const newMovements = cart.map(item => {
       const pIdx = updatedProducts.findIndex(p => p.id === item.id);
@@ -88,7 +98,7 @@ export default function InventoryPage() {
         qty: item.quantity,
         totalCost: item.quantity * item.costPrice,
         ref: reference,
-        source: selectedSupplier,
+        source: finalSupplier,
         paymentStatus,
         paymentRef,
         notes,
@@ -113,7 +123,7 @@ export default function InventoryPage() {
            date: new Date().toISOString(),
            category: 'Inventory Purchase',
            amount: totalCost,
-           description: `Received goods from ${selectedSupplier} (Ref: ${reference})`,
+           description: `Received goods from ${finalSupplier} (Ref: ${reference})`,
            paymentMethod: 'Bank/M-Pesa',
            ref: paymentRef
          });
