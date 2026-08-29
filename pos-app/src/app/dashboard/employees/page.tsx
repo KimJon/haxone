@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Users,
   UserCheck,
@@ -34,43 +34,94 @@ interface Employee {
   username: string;
   initials: string;
   color: string;
+  permissions?: string[];
 }
 
-const employees: Employee[] = [];
-
-const roleBadge: Record<string, { bg: string; text: string }> = {
-  Manager: { bg: '#EFF6FF', text: '#2563EB' },
-  Cashier: { bg: '#F0FDF4', text: '#16A34A' },
-  'Stock Clerk': { bg: '#F5F3FF', text: '#7C3AED' },
-};
-
-const statusBadge: Record<string, { bg: string; text: string }> = {
-  Active: { bg: '#F0FDF4', text: '#16A34A' },
-  'On Leave': { bg: '#FFFBEB', text: '#D97706' },
-  Inactive: { bg: '#FEF2F2', text: '#DC2626' },
-};
-
-const statCards = [
-  { label: 'Total Staff', value: 14, icon: Users, color: '#2563EB', bg: '#EFF6FF' },
-  { label: 'Active', value: 12, icon: UserCheck, color: '#16A34A', bg: '#F0FDF4' },
-  { label: 'On Leave', value: 2, icon: Coffee, color: '#D97706', bg: '#FFFBEB' },
-  { label: 'Cashiers', value: 5, icon: ShoppingCart, color: '#7C3AED', bg: '#F5F3FF' },
-];
+const colors = ['#2563EB', '#7C3AED', '#16A34A', '#D97706', '#DC2626', '#0891B2', '#4F46E5', '#DB2777'];
 
 export default function EmployeesPage() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [form, setForm] = useState({
-    name: '', role: 'Cashier', phone: '', email: '', branch: 'Nairobi CBD', username: '', password: '',
-  });
+  const [form, setForm] = useState({ name: '', role: 'Cashier', phone: '', email: '', branch: 'Nairobi CBD', username: '', password: '', permissions: [] as string[] });
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
+  const [employeeList, setEmployeeList] = useState<Employee[]>([]);
 
-  const filtered = employees.filter(e =>
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('haxone_employees');
+        if (stored) setEmployeeList(JSON.parse(stored));
+      } catch (e) {}
+    }
+  }, []);
+
+  const saveEmployees = (list: Employee[]) => {
+    setEmployeeList(list);
+    try { localStorage.setItem('haxone_employees', JSON.stringify(list)); } catch {}
+  };
+
+  const handleAddEmployee = () => {
+    if (!form.name || !form.phone || !form.username) {
+      alert('Please fill in Name, Phone, and Username.');
+      return;
+    }
+    const initials = form.name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+    const newEmp: Employee = {
+      id: Date.now(),
+      name: form.name,
+      role: form.role as Employee['role'],
+      phone: form.phone,
+      email: form.email,
+      branch: form.branch,
+      shift: 'Morning',
+      salesToday: 0,
+      status: 'Active',
+      username: form.username,
+      initials,
+      color: colors[employeeList.length % colors.length],
+      permissions: form.permissions,
+    };
+    saveEmployees([...employeeList, newEmp]);
+    setForm({ name: '', role: 'Cashier', phone: '', email: '', branch: 'Nairobi CBD', username: '', password: '', permissions: [] });
+    setShowModal(false);
+  };
+
+  const handleDeleteEmployee = (id: number) => {
+    if (confirm('Are you sure you want to remove this employee?')) {
+      saveEmployees(employeeList.filter(e => e.id !== id));
+    }
+    setActiveMenu(null);
+  };
+
+  const activeCount = employeeList.filter(e => e.status === 'Active').length;
+  const leaveCount = employeeList.filter(e => e.status === 'On Leave').length;
+  const cashierCount = employeeList.filter(e => e.role === 'Cashier').length;
+
+  const statCards = [
+    { label: 'Total Staff', value: employeeList.length, icon: Users, color: '#2563EB', bg: '#EFF6FF' },
+    { label: 'Active', value: activeCount, icon: UserCheck, color: '#16A34A', bg: '#F0FDF4' },
+    { label: 'On Leave', value: leaveCount, icon: Coffee, color: '#D97706', bg: '#FFFBEB' },
+    { label: 'Cashiers', value: cashierCount, icon: ShoppingCart, color: '#7C3AED', bg: '#F5F3FF' },
+  ];
+
+  const filtered = employeeList.filter(e =>
     e.name.toLowerCase().includes(search.toLowerCase()) ||
     e.role.toLowerCase().includes(search.toLowerCase()) ||
     e.branch.toLowerCase().includes(search.toLowerCase())
   );
+
+  const roleBadge: Record<string, { bg: string; text: string }> = {
+    Manager: { bg: '#EFF6FF', text: '#2563EB' },
+    Cashier: { bg: '#F0FDF4', text: '#16A34A' },
+    'Stock Clerk': { bg: '#F5F3FF', text: '#7C3AED' },
+  };
+
+  const statusBadge: Record<string, { bg: string; text: string }> = {
+    Active: { bg: '#F0FDF4', text: '#16A34A' },
+    'On Leave': { bg: '#FFFBEB', text: '#D97706' },
+    Inactive: { bg: '#FEF2F2', text: '#DC2626' },
+  };
 
   return (
     <div style={{ background: '#F3F4F6', minHeight: '100vh', fontFamily: "'Inter', sans-serif", padding: '32px' }}>
@@ -209,7 +260,7 @@ export default function EmployeesPage() {
                           <button onClick={() => setActiveMenu(null)} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#374151' }}>
                             <Edit2 size={13} /> Edit Employee
                           </button>
-                          <button onClick={() => setActiveMenu(null)} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#DC2626' }}>
+                          <button onClick={() => handleDeleteEmployee(emp.id)} style={{ width: '100%', padding: '10px 14px', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', color: '#DC2626' }}>
                             <Trash2 size={13} /> Remove
                           </button>
                         </div>
@@ -222,7 +273,7 @@ export default function EmployeesPage() {
           </table>
         </div>
         <div style={{ padding: '14px 24px', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>Showing {filtered.length} of {employees.length} employees</p>
+          <p style={{ fontSize: '13px', color: '#9CA3AF', margin: 0 }}>Showing {filtered.length} of {employeeList.length} employees</p>
           <div style={{ display: 'flex', gap: '6px' }}>
             {[1, 2].map(n => (
               <button key={n} style={{ width: '32px', height: '32px', borderRadius: '8px', border: n === 1 ? 'none' : '1px solid #E5E7EB', background: n === 1 ? '#2563EB' : '#fff', color: n === 1 ? '#fff' : '#374151', fontWeight: 600, fontSize: '13px', cursor: 'pointer' }}>{n}</button>
@@ -311,12 +362,34 @@ export default function EmployeesPage() {
                   </button>
                 </div>
               </div>
+              {/* Permissions */}
+              <div style={{ gridColumn: 'span 2', background: '#F9FAFB', padding: '16px', borderRadius: '12px', border: '1px solid #E5E7EB' }}>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: '#374151', display: 'block', marginBottom: '10px' }}>Allowed Modules / Rights</label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                  {['POS', 'Sales', 'Products', 'Inventory', 'Customers', 'Suppliers', 'Expenses', 'Accounting', 'Reports', 'Settings', 'Employees'].map(mod => (
+                    <label key={mod} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#4B5563', cursor: 'pointer' }}>
+                      <input 
+                        type="checkbox"
+                        checked={form.permissions.includes(mod)}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setForm(p => ({
+                            ...p, 
+                            permissions: checked ? [...p.permissions, mod] : p.permissions.filter(m => m !== mod)
+                          }));
+                        }}
+                      />
+                      {mod}
+                    </label>
+                  ))}
+                </div>
+              </div>
             </div>
             <div style={{ padding: '20px 24px', borderTop: '1px solid #F3F4F6', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
               <button onClick={() => setShowModal(false)} style={{ padding: '10px 20px', border: '1.5px solid #E5E7EB', borderRadius: '10px', background: '#fff', color: '#374151', fontWeight: 600, fontSize: '14px', cursor: 'pointer' }}>
                 Cancel
               </button>
-              <button style={{ padding: '10px 24px', border: 'none', borderRadius: '10px', background: '#2563EB', color: '#fff', fontWeight: 600, fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
+              <button onClick={handleAddEmployee} style={{ padding: '10px 24px', border: 'none', borderRadius: '10px', background: '#2563EB', color: '#fff', fontWeight: 600, fontSize: '14px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.3)' }}>
                 Add Employee
               </button>
             </div>

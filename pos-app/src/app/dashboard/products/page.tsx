@@ -13,34 +13,90 @@ function StatusBadge({ stock }: { stock: number }) {
 }
 
 export default function ProductsPage() {
-  const [products] = useState(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [categories, setCategories] = useState(CATEGORIES);
   const [category, setCategory] = useState('All');
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', sku: '', category: CATEGORIES[1], buyPrice: '', sellPrice: '', stock: '', unit: 'Pcs', image: '' });
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const defaultForm = { id: '', name: '', sku: '', category: CATEGORIES[1], buyPrice: '', sellPrice: '', stock: '', unit: 'Pcs', image: '' };
+  const [form, setForm] = useState(defaultForm);
 
   useEffect(() => {
-    try {
-      const custom = JSON.parse(localStorage.getItem('haxone_product_categories') || '[]');
-      if (custom.length > 0) {
-        setCategories(prev => Array.from(new Set([...prev, ...custom])));
-      }
-    } catch(e) {}
+    if (typeof window !== 'undefined') {
+      try {
+        const storedProducts = JSON.parse(localStorage.getItem('haxone_products') || '[]');
+        setProducts(storedProducts);
+
+        const custom = JSON.parse(localStorage.getItem('haxone_product_categories') || '[]');
+        if (custom.length > 0) {
+          setCategories(prev => Array.from(new Set([...prev, ...custom])));
+        }
+      } catch(e) {}
+    }
   }, []);
 
   const handleSaveProduct = () => {
-    // Check if new category
+    if (!form.name || !form.buyPrice || !form.sellPrice || !form.stock) {
+      alert('Please fill out all required fields.');
+      return;
+    }
+
+    let updatedCats = categories;
     if (form.category && !categories.includes(form.category) && form.category !== 'All') {
-      const newCats = [...categories, form.category];
-      setCategories(newCats);
+      updatedCats = [...categories, form.category];
+      setCategories(updatedCats);
       try {
-        const customOnly = newCats.filter(c => !CATEGORIES.includes(c));
+        const customOnly = updatedCats.filter(c => !CATEGORIES.includes(c));
         localStorage.setItem('haxone_product_categories', JSON.stringify(customOnly));
       } catch(e) {}
     }
-    // Ideally we would add to products array here too for the demo, but we just close modal
+
+    let updatedProducts;
+    if (isEditing) {
+      updatedProducts = products.map(p => p.id === form.id ? form : p);
+    } else {
+      const newProduct = {
+        ...form,
+        id: `PRD-${Math.floor(Math.random() * 100000)}`,
+        buyPrice: Number(form.buyPrice),
+        sellPrice: Number(form.sellPrice),
+        stock: Number(form.stock)
+      };
+      updatedProducts = [newProduct, ...products];
+    }
+
+    setProducts(updatedProducts);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('haxone_products', JSON.stringify(updatedProducts));
+    }
+    
     setShowModal(false);
+    setForm(defaultForm);
+    setIsEditing(false);
+  };
+
+  const handleEdit = (product: any) => {
+    setForm(product);
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Are you sure you want to delete this product?')) {
+      const updated = products.filter(p => p.id !== id);
+      setProducts(updated);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('haxone_products', JSON.stringify(updated));
+      }
+    }
+  };
+
+  const openNewProductModal = () => {
+    setForm(defaultForm);
+    setIsEditing(false);
+    setShowModal(true);
   };
 
   const filtered = products.filter(p => {
@@ -62,8 +118,7 @@ export default function ProductsPage() {
           <p className="text-sm text-gray-500 mt-0.5">Manage your product catalogue</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-4 py-2.5 border border-gray-200 bg-white text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm">Import CSV</button>
-          <button onClick={() => setShowModal(true)} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
+          <button onClick={openNewProductModal} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
             <Plus size={16} /> Add Product
           </button>
         </div>
@@ -110,8 +165,12 @@ export default function ProductsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filtered.map(p => {
-                const margin = Math.round(((p.sellPrice - p.buyPrice) / p.buyPrice) * 100);
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-4 py-8 text-center text-gray-500">No products found. Create one to get started.</td>
+                </tr>
+              ) : filtered.map(p => {
+                const margin = Math.round(((p.sellPrice - p.buyPrice) / p.buyPrice) * 100) || 0;
                 return (
                   <tr key={p.id} className="hover:bg-gray-50/60 transition-colors">
                     <td className="px-4 py-3.5">
@@ -128,8 +187,8 @@ export default function ProductsPage() {
                     <td className="px-4 py-3.5"><StatusBadge stock={p.stock} /></td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-2">
-                        <button className="p-1.5 hover:bg-blue-50 hover:text-blue-600 text-gray-400 rounded-lg transition-colors"><Edit2 size={14} /></button>
-                        <button className="p-1.5 hover:bg-red-50 hover:text-red-600 text-gray-400 rounded-lg transition-colors"><Trash2 size={14} /></button>
+                        <button onClick={() => handleEdit(p)} className="p-1.5 hover:bg-blue-50 hover:text-blue-600 text-gray-400 rounded-lg transition-colors"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(p.id)} className="p-1.5 hover:bg-red-50 hover:text-red-600 text-gray-400 rounded-lg transition-colors"><Trash2 size={14} /></button>
                       </div>
                     </td>
                   </tr>

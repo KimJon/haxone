@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Settings,
   Store,
@@ -159,7 +159,59 @@ export default function SettingsPage() {
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
 
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('haxone_settings');
+        if (stored) {
+          const s = JSON.parse(stored);
+          setBusinessName(s.businessName ?? 'HaxOne Supermart');
+          setEmail(s.email ?? 'admin@haxone.co.ke');
+          setPhone(s.phone ?? '+254 712 000 001');
+          setAddress(s.address ?? 'Tom Mboya Street, Nairobi CBD');
+          setCountry(s.country ?? 'Kenya');
+          setCurrency(s.currency ?? 'KES');
+          
+          setOpenTime(s.openTime ?? '07:00');
+          setCloseTime(s.closeTime ?? '21:00');
+          setReceiptFooter(s.receiptFooter ?? 'Asante kwa ununuzi! | Thank you for shopping with us!');
+          setLoyaltyPoints(s.loyaltyPoints ?? true);
+          setAutoDiscounts(s.autoDiscounts ?? true);
+          setLowStockAlerts(s.lowStockAlerts ?? true);
+          setEmailReceipts(s.emailReceipts ?? false);
+
+          setMpesaEnabled(s.mpesaEnabled ?? true);
+          setMpesaPaybill(s.mpesaPaybill ?? '174379');
+          setCashEnabled(s.cashEnabled ?? true);
+          setCardEnabled(s.cardEnabled ?? false);
+
+          setVatRate(s.vatRate ?? '16');
+          setKraPin(s.kraPin ?? 'A001234567B');
+          setTaxInclusive(s.taxInclusive ?? true);
+
+          setEmailAlerts(s.emailAlerts ?? true);
+          setSmsAlerts(s.smsAlerts ?? false);
+          setLowStockThreshold(s.lowStockThreshold ?? '10');
+          setDailyReport(s.dailyReport ?? true);
+          setTwoFA(s.twoFA ?? false);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
   const handleSave = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('haxone_settings', JSON.stringify({
+          businessName, email, phone, address, country, currency,
+          openTime, closeTime, receiptFooter, loyaltyPoints, autoDiscounts, lowStockAlerts, emailReceipts,
+          mpesaEnabled, mpesaPaybill, cashEnabled, cardEnabled,
+          vatRate, kraPin, taxInclusive,
+          emailAlerts, smsAlerts, lowStockThreshold, dailyReport,
+          twoFA
+        }));
+      } catch (e) {}
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   TrendingUp,
   Package,
@@ -94,29 +94,6 @@ const reportCards: ReportCard[] = [
     lastGenerated: '18 Jul 2026',
   },
 ];
-
-const plRows: PLRow[] = [
-  { label: 'Revenue',               thisMonth: 254780, lastMonth: 231450, isHeader: false },
-  { label: 'Cost of Goods Sold',    thisMonth: 142390, lastMonth: 130820, isNegative: true },
-  { label: 'Gross Profit',          thisMonth: 112390, lastMonth: 100630, isTotal: true },
-  { label: 'Operating Expenses',    thisMonth: null,   lastMonth: null,   isHeader: true },
-  { label: 'Salaries & Wages',      thisMonth: 28000,  lastMonth: 28000,  isIndent: true },
-  { label: 'Rent',                  thisMonth: 45000,  lastMonth: 45000,  isIndent: true },
-  { label: 'Utilities',             thisMonth: 12400,  lastMonth: 11800,  isIndent: true },
-  { label: 'Marketing',             thisMonth: 12300,  lastMonth: 9500,   isIndent: true },
-  { label: 'Transport',             thisMonth: 8100,   lastMonth: 7200,   isIndent: true },
-  { label: 'Maintenance',           thisMonth: 5500,   lastMonth: 3200,   isIndent: true },
-  { label: 'Total Opex',            thisMonth: 111300, lastMonth: 104700, isTotal: true, isNegative: true },
-  { label: 'Net Profit',            thisMonth: 1090,   lastMonth: -4070,  isTotal: true, isPositive: true },
-];
-
-const dateRanges: { key: DateRange; label: string }[] = [
-  { key: 'this_month',    label: 'This Month' },
-  { key: 'last_month',    label: 'Last Month' },
-  { key: 'this_quarter',  label: 'This Quarter' },
-  { key: 'this_year',     label: 'This Year' },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) => `KES ${Math.abs(n).toLocaleString('en-KE')}`;
 
@@ -224,6 +201,47 @@ export default function ReportsPage() {
   const [dateRange, setDateRange] = useState<DateRange>('this_month');
   const [customFrom, setCustomFrom] = useState('');
   const [customTo, setCustomTo] = useState('');
+  
+  const [sales, setSales] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        setSales(JSON.parse(localStorage.getItem('haxone_sales') || '[]'));
+        setExpenses(JSON.parse(localStorage.getItem('haxone_expenses') || '[]'));
+      } catch (e) {}
+    }
+  }, []);
+
+  const totalRevenue = sales.reduce((sum, s) => sum + (s.amount || 0), 0);
+  
+  const cogs = sales.reduce((sum, s) => {
+    if (!s.items) return sum;
+    return sum + s.items.reduce((acc: number, item: any) => acc + (item.buyPrice * item.qty), 0);
+  }, 0);
+
+  const grossProfit = totalRevenue - cogs;
+  
+  const expensesByCategory = expenses.reduce((acc: Record<string, number>, e) => {
+    acc[e.category] = (acc[e.category] || 0) + e.amount;
+    return acc;
+  }, {});
+
+  const totalExpenses = expenses.reduce((sum, e) => sum + e.amount, 0);
+  const netProfit = grossProfit - totalExpenses;
+
+  const plRows: PLRow[] = [
+    { label: 'Revenue',               thisMonth: totalRevenue, lastMonth: 0, isHeader: false },
+    { label: 'Cost of Goods Sold',    thisMonth: cogs, lastMonth: 0, isNegative: true },
+    { label: 'Gross Profit',          thisMonth: grossProfit, lastMonth: 0, isTotal: true },
+    { label: 'Operating Expenses',    thisMonth: null,   lastMonth: null,   isHeader: true },
+    ...Object.entries(expensesByCategory).map(([cat, amt]) => ({
+      label: cat, thisMonth: amt as number, lastMonth: 0, isIndent: true, isNegative: true
+    })),
+    { label: 'Total Opex',            thisMonth: totalExpenses, lastMonth: 0, isTotal: true, isNegative: true },
+    { label: 'Net Profit',            thisMonth: netProfit,   lastMonth: 0,  isTotal: true, isPositive: netProfit >= 0, isNegative: netProfit < 0 },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F3F4F6] p-6 font-sans">

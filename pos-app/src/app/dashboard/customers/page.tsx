@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   X,
@@ -53,11 +53,45 @@ function Initials({ name, index }: { name: string; index: number }) {
 }
 
 export default function CustomersPage() {
-  const [customers] = useState<Customer[]>(INITIAL_CUSTOMERS);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' });
   const [tierFilter, setTierFilter] = useState('All Tiers');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedCustomers = JSON.parse(localStorage.getItem('haxone_customers') || '[]');
+        setCustomers(storedCustomers);
+      } catch (e) {}
+    }
+  }, []);
+
+  const handleSaveCustomer = () => {
+    if (!form.name || !form.phone) return;
+
+    const newCustomer = {
+      id: Math.floor(Math.random() * 1000000),
+      name: form.name,
+      phone: form.phone,
+      email: form.email || 'N/A',
+      orders: 0,
+      spent: 0,
+      lastVisit: 'Never',
+      points: 0,
+      tier: 'Bronze',
+      notes: form.notes
+    };
+
+    const updated = [newCustomer, ...customers];
+    setCustomers(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('haxone_customers', JSON.stringify(updated));
+    }
+    setShowModal(false);
+    setForm({ name: '', phone: '', email: '', notes: '' });
+  };
 
   const filtered = customers.filter(c => {
     const matchSearch = c.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -216,7 +250,7 @@ export default function CustomersPage() {
             </div>
             <div className="px-6 py-4 border-t border-gray-100 flex gap-3 justify-end">
               <button onClick={() => setShowModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">Cancel</button>
-              <button disabled={!form.name || !form.phone} className="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors">
+              <button onClick={handleSaveCustomer} disabled={!form.name || !form.phone} className="px-5 py-2 bg-[#2563EB] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors">
                 Add Customer
               </button>
             </div>

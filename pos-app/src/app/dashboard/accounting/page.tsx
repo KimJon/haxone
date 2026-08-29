@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   TrendingUp,
   ShoppingBag,
@@ -38,40 +38,10 @@ interface PLRow {
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
-const cashFlowData = [
-  { month: 'Feb', inflows: 182000, outflows: 148000 },
-  { month: 'Mar', inflows: 207400, outflows: 159200 },
-  { month: 'Apr', inflows: 194600, outflows: 161000 },
-  { month: 'May', inflows: 231000, outflows: 172000 },
-  { month: 'Jun', inflows: 218700, outflows: 165800 },
-  { month: 'Jul', inflows: 254780, outflows: 145200 },
-];
-
-const plRows: PLRow[] = [
-  { label: 'Revenue',                thisMonth: 254780, lastMonth: 231450 },
-  { label: 'Cost of Goods Sold',     thisMonth: 142390, lastMonth: 130820, isNegative: true },
-  { label: 'Gross Profit',           thisMonth: 112390, lastMonth: 100630, isTotal: true },
-  { label: 'Operating Expenses',     thisMonth: null,   lastMonth: null,   isHeader: true },
-  { label: 'Salaries & Wages',       thisMonth: 28000,  lastMonth: 28000,  isIndent: true, isNegative: true },
-  { label: 'Rent',                   thisMonth: 45000,  lastMonth: 45000,  isIndent: true, isNegative: true },
-  { label: 'Utilities',              thisMonth: 12400,  lastMonth: 11800,  isIndent: true, isNegative: true },
-  { label: 'Marketing & Ads',        thisMonth: 12300,  lastMonth: 9500,   isIndent: true, isNegative: true },
-  { label: 'Transport & Logistics',  thisMonth: 8100,   lastMonth: 7200,   isIndent: true, isNegative: true },
-  { label: 'Maintenance',            thisMonth: 5500,   lastMonth: 3200,   isIndent: true, isNegative: true },
-  { label: 'Total Operating Expenses', thisMonth: 111300, lastMonth: 104700, isTotal: true, isNegative: true },
-  { label: 'Net Profit',             thisMonth: 1090,   lastMonth: -4070,  isTotal: true, isNet: true },
-];
-
-const periods: { key: Period; label: string }[] = [
-  { key: 'this_month',   label: 'This Month' },
-  { key: 'last_month',   label: 'Last Month' },
-  { key: 'this_quarter', label: 'This Quarter' },
-  { key: 'ytd',          label: 'Year to Date' },
-];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const fmt = (n: number) => `KES ${Math.abs(n).toLocaleString('en-KE')}`;
-const fmtShort = (n: number) => `${(n / 1000).toFixed(0)}k`;
+const fmtShort = (n: number) => `KES ${(n / 1000).toFixed(0)}k`;
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -87,8 +57,8 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         ))}
         <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between text-xs">
           <span className="text-gray-400">Net Cash</span>
-          <span className={`font-bold ${payload[0].value - payload[1].value >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
-            {fmt(payload[0].value - payload[1].value)}
+          <span className={`font-bold ${(payload[0]?.value || 0) - (payload[1]?.value || 0) >= 0 ? 'text-emerald-600' : 'text-red-500'}`}>
+            {fmt((payload[0]?.value || 0) - (payload[1]?.value || 0))}
           </span>
         </div>
       </div>
@@ -121,7 +91,7 @@ function KPICard({ icon, label, value, change, positive, iconBg }: KPICardProps)
       <div>
         <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</p>
         <p className="text-2xl font-bold text-[#0D1117] mt-0.5">{value}</p>
-        <p className="text-xs text-gray-400 mt-0.5">vs last month</p>
+        <p className="text-xs text-gray-400 mt-0.5">Calculated locally</p>
       </div>
     </div>
   );
@@ -192,6 +162,88 @@ function VATItem({ label, value, sub, highlight }: VATItemProps) {
 // ─── Page ─────────────────────────────────────────────────────────────────────
 export default function AccountingPage() {
   const [period, setPeriod] = useState<Period>('this_month');
+  const [sales, setSales] = useState<any[]>([]);
+  const [expenses, setExpenses] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        setSales(JSON.parse(localStorage.getItem('haxone_sales') || '[]'));
+        setExpenses(JSON.parse(localStorage.getItem('haxone_expenses') || '[]'));
+      } catch (e) {}
+    }
+  }, []);
+
+  const totalRevenue = sales.reduce((sum, s) => sum + (s.amount || 0), 0);
+  
+  const cogs = sales.reduce((sum, s) => {
+    if (!s.items) return sum;
+    return sum + s.items.reduce((acc: number, item: any) => acc + (item.buyPrice * item.qty), 0);
+  }, 0);
+
+  const grossProfit = totalRevenue - cogs;
+  
+  // Aggregate expenses by category
+  const expensesByCategory = expenses.reduce((acc: Record<string, number>, e) => {
+    acc[e.category] = (acc[e.category] || 0) + e.amount;
+    return acc;
+  }, {});
+
+  const totalExpenses = Object.values(expensesByCategory).reduce((s, a) => s + a, 0);
+  const netProfit = grossProfit - totalExpenses;
+
+  // Build dynamic cashFlowData for the last 6 months
+  const cashFlowMap: Record<string, { month: string; inflows: number; outflows: number }> = {};
+  
+  // Initialize last 6 months with 0
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date();
+    d.setMonth(d.getMonth() - i);
+    const monthStr = d.toLocaleString('default', { month: 'short' });
+    const yearStr = d.getFullYear().toString().slice(-2);
+    const key = `${monthStr} '${yearStr}`;
+    cashFlowMap[key] = { month: key, inflows: 0, outflows: 0 };
+  }
+
+  sales.forEach(s => {
+    if (!s.date) return;
+    const d = new Date(s.date);
+    const key = `${d.toLocaleString('default', { month: 'short' })} '${d.getFullYear().toString().slice(-2)}`;
+    if (cashFlowMap[key]) {
+      cashFlowMap[key].inflows += (s.amount || 0);
+    }
+  });
+
+  expenses.forEach(e => {
+    if (!e.date) return;
+    const d = new Date(e.date);
+    const key = `${d.toLocaleString('default', { month: 'short' })} '${d.getFullYear().toString().slice(-2)}`;
+    if (cashFlowMap[key]) {
+      cashFlowMap[key].outflows += (e.amount || 0);
+    }
+  });
+
+  const cashFlowData = Object.values(cashFlowMap);
+
+  // Build PLRows dynamically
+  const plRows: PLRow[] = [
+    { label: 'Revenue',                thisMonth: totalRevenue, lastMonth: 0 },
+    { label: 'Cost of Goods Sold',     thisMonth: cogs, lastMonth: 0, isNegative: true },
+    { label: 'Gross Profit',           thisMonth: grossProfit, lastMonth: 0, isTotal: true },
+    { label: 'Operating Expenses',     thisMonth: null,   lastMonth: null,   isHeader: true },
+    ...Object.entries(expensesByCategory).map(([cat, amt]) => ({
+      label: cat, thisMonth: amt as number, lastMonth: 0, isIndent: true, isNegative: true
+    })),
+    { label: 'Total Operating Expenses', thisMonth: totalExpenses, lastMonth: 0, isTotal: true, isNegative: true },
+    { label: 'Net Profit',             thisMonth: netProfit,   lastMonth: 0,  isTotal: true, isNet: true },
+  ];
+
+  const periods: { key: Period; label: string }[] = [
+    { key: 'this_month',   label: 'This Month' },
+    { key: 'last_month',   label: 'Last Month' },
+    { key: 'this_quarter', label: 'This Quarter' },
+    { key: 'ytd',          label: 'Year to Date' },
+  ];
 
   return (
     <div className="min-h-screen bg-[#F3F4F6] p-6 font-sans">
@@ -202,23 +254,6 @@ export default function AccountingPage() {
           <p className="text-sm text-gray-500 mt-0.5">Financial performance, P&L, cash flow, and VAT</p>
         </div>
         <div className="flex items-center gap-3">
-          {/* Period tabs */}
-          <div className="flex items-center gap-1 bg-white rounded-xl shadow-sm p-1">
-            <CalendarDays size={13} className="text-gray-400 ml-2" />
-            {periods.map((p) => (
-              <button
-                key={p.key}
-                onClick={() => setPeriod(p.key)}
-                className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
-                  period === p.key
-                    ? 'bg-[#2563EB] text-white shadow'
-                    : 'text-gray-500 hover:text-[#0D1117]'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
           <button className="flex items-center gap-2 border border-gray-200 bg-white hover:bg-gray-50 text-gray-700 px-4 py-2 rounded-xl text-sm font-medium transition-colors shadow-sm">
             <Download size={14} />
             Export
@@ -232,33 +267,33 @@ export default function AccountingPage() {
           icon={<TrendingUp size={19} className="text-blue-600" />}
           iconBg="bg-blue-50"
           label="Total Revenue"
-          value="KES 254,780"
-          change="+10.1%"
+          value={fmt(totalRevenue)}
+          change="Real-time"
           positive={true}
         />
         <KPICard
           icon={<ShoppingBag size={19} className="text-amber-600" />}
           iconBg="bg-amber-50"
           label="Cost of Goods Sold"
-          value="KES 142,390"
-          change="+8.8%"
+          value={fmt(cogs)}
+          change="Real-time"
           positive={false}
         />
         <KPICard
           icon={<DollarSign size={19} className="text-emerald-600" />}
           iconBg="bg-emerald-50"
           label="Gross Profit"
-          value="KES 112,390"
-          change="+11.7%"
+          value={fmt(grossProfit)}
+          change="Real-time"
           positive={true}
         />
         <KPICard
           icon={<TrendingDown size={19} className="text-violet-600" />}
           iconBg="bg-violet-50"
           label="Net Profit"
-          value="KES 78,450"
-          change="+18.3%"
-          positive={true}
+          value={fmt(netProfit)}
+          change="Real-time"
+          positive={netProfit >= 0}
         />
       </div>
 
@@ -364,18 +399,18 @@ export default function AccountingPage() {
           <div className="grid grid-cols-1 gap-3 flex-1">
             <VATItem
               label="VAT Collected (Output)"
-              value="KES 40,765"
-              sub="On KES 254,780 sales"
+              value={fmt(sales.reduce((sum, s) => sum + (s.tax || 0), 0))}
+              sub={`On ${fmt(totalRevenue - sales.reduce((sum, s) => sum + (s.tax || 0), 0))} net sales`}
             />
             <VATItem
               label="VAT on Purchases (Input)"
-              value="KES 22,782"
-              sub="On KES 142,390 COGS"
+              value={fmt(cogs * 0.16)}
+              sub={`On ${fmt(cogs)} COGS (16%)`}
             />
             <VATItem
               label="VAT Payable to KRA"
-              value="KES 17,983"
-              sub="Due by 20 Aug 2026"
+              value={fmt(sales.reduce((sum, s) => sum + (s.tax || 0), 0) - (cogs * 0.16))}
+              sub="Dynamic Projection"
               highlight
             />
           </div>
@@ -384,7 +419,7 @@ export default function AccountingPage() {
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
             <div className="w-2 h-2 rounded-full bg-amber-400 shrink-0" />
             <p className="text-xs text-amber-700">
-              <span className="font-semibold">Filing Due:</span> 20 Aug 2026. Ensure iTax return is submitted before the deadline.
+              <span className="font-semibold">Filing Due:</span> 20th of next month.
             </p>
           </div>
 
@@ -400,15 +435,15 @@ export default function AccountingPage() {
               </thead>
               <tbody className="divide-y divide-gray-50">
                 {[
-                  { item: 'Sales',     base: '254,780', vat: '40,765' },
-                  { item: 'Purchases', base: '142,390', vat: '22,782' },
-                  { item: 'Net',       base: '112,390', vat: '17,983' },
+                  { item: 'Sales',     base: fmtShort(totalRevenue - sales.reduce((sum, s) => sum + (s.tax || 0), 0)), vat: fmtShort(sales.reduce((sum, s) => sum + (s.tax || 0), 0)) },
+                  { item: 'Purchases', base: fmtShort(cogs), vat: fmtShort(cogs * 0.16) },
+                  { item: 'Net',       base: fmtShort(grossProfit), vat: fmtShort(sales.reduce((sum, s) => sum + (s.tax || 0), 0) - (cogs * 0.16)) },
                 ].map((r) => (
                   <tr key={r.item} className={r.item === 'Net' ? 'bg-gray-50 font-bold' : ''}>
                     <td className="px-3 py-2 text-gray-700">{r.item}</td>
-                    <td className="px-3 py-2 text-right text-gray-700">KES {r.base}</td>
+                    <td className="px-3 py-2 text-right text-gray-700">{r.base}</td>
                     <td className={`px-3 py-2 text-right font-semibold ${r.item === 'Net' ? 'text-[#2563EB]' : 'text-gray-700'}`}>
-                      KES {r.vat}
+                      {r.vat}
                     </td>
                   </tr>
                 ))}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Plus,
   X,
@@ -34,7 +34,7 @@ interface Supplier {
 const INITIAL_SUPPLIERS: Supplier[] = [];
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(INITIAL_SUPPLIERS);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editSupplier, setEditSupplier] = useState<Supplier | null>(null);
@@ -42,6 +42,15 @@ export default function SuppliersPage() {
   const [form, setForm] = useState({
     company: '', contact: '', phone: '', email: '', location: '', category: '',
   });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const storedSuppliers = JSON.parse(localStorage.getItem('haxone_suppliers') || '[]');
+        setSuppliers(storedSuppliers);
+      } catch (e) {}
+    }
+  }, []);
 
   const filtered = suppliers.filter(s => {
     const matchSearch = s.company.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,18 +90,27 @@ export default function SuppliersPage() {
   }
 
   function handleSave() {
+    let updated;
     if (editSupplier) {
-      setSuppliers(prev => prev.map(s => s.id === editSupplier.id ? { ...s, ...form } : s));
+      updated = suppliers.map(s => s.id === editSupplier.id ? { ...s, ...form } : s);
     } else {
-      setSuppliers(prev => [...prev, {
-        id: Date.now(), ...form, products: 0, orders: 0, balance: 0, status: 'Active',
-      }]);
+      updated = [{
+        id: Date.now(), ...form, products: 0, orders: 0, balance: 0, status: 'Active' as const,
+      }, ...suppliers];
+    }
+    setSuppliers(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('haxone_suppliers', JSON.stringify(updated));
     }
     setShowModal(false);
   }
 
   function toggleStatus(id: number) {
-    setSuppliers(prev => prev.map(s => s.id === id ? { ...s, status: s.status === 'Active' ? 'Inactive' : 'Active' } : s));
+    const updated = suppliers.map(s => s.id === id ? { ...s, status: (s.status === 'Active' ? 'Inactive' : 'Active') as 'Active' | 'Inactive' } : s);
+    setSuppliers(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('haxone_suppliers', JSON.stringify(updated));
+    }
   }
 
   return (

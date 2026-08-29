@@ -1,4 +1,4 @@
-export function Logo({ className = "h-8", showText = true, lightText = false }: { className?: string, showText?: boolean, lightText?: boolean }) {
+export function Logo({ className = "h-16", showText = true, lightText = false }: { className?: string, showText?: boolean, lightText?: boolean }) {
   return (
     <div className={`flex items-center ${className}`}>
       <img 

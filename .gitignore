@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+.next/
+out/
+
+# Electron build artifacts
+pos-app/dist-electron/
+dist-electron/
+electron/
+
+# Zip bundles
+*.zip
+
+# Test folders
+test_unzip/
+test_unzip_standard/
+
+# Android build
+android/
+
+# Environment
+.env
+.env.local
+.env*.local
+
+# Temp files
+one_site.txt
+pos-app/one_site.txt

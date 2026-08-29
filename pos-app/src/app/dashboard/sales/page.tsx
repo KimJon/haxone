@@ -57,8 +57,31 @@ export default function SalesPage() {
 
   const filtered = getFilteredTransactions();
 
-  const totalRevenue = filtered.filter(t => t.status === 'Completed').reduce((s, t) => s + t.amount, 0);
-  const avgOrder = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
+    const getChartData = () => {
+      const data = [];
+      const today = new Date();
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dayStr = d.toISOString().split('T')[0];
+        
+        const daySales = transactions
+          .filter(t => t.fullDate && t.fullDate.startsWith(dayStr) && t.status === 'Completed')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        data.push({
+          day: d.toLocaleDateString('en-US', { weekday: 'short' }),
+          sales: daySales
+        });
+      }
+      return data;
+    };
+
+    const dynamicChartData = getChartData();
+    const totalRevenue = filtered.filter(t => t.status === 'Completed').reduce((s, t) => s + t.amount, 0);
+    const avgOrder = filtered.length ? Math.round(totalRevenue / filtered.length) : 0;
+    const totalOrders = filtered.length;
+    const returnsCount = filtered.filter(t => t.status === 'Refunded').length;
 
   return (
     <div className="min-h-screen bg-[#F3F4F6] p-6">
@@ -85,10 +108,10 @@ export default function SalesPage() {
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Total Revenue', value: `KES ${totalRevenue.toLocaleString()}`, icon: <TrendingUp size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', sub: '↑ 12.5% vs yesterday', subColor: 'text-green-600' },
-          { label: 'Total Orders', value: '1,482', icon: <ShoppingBag size={20} />, color: 'text-violet-600', bg: 'bg-violet-50', sub: '↑ 8.3%', subColor: 'text-green-600' },
+          { label: 'Total Revenue', value: `KES ${totalRevenue.toLocaleString()}`, icon: <TrendingUp size={20} />, color: 'text-blue-600', bg: 'bg-blue-50', sub: 'Calculated from sales', subColor: 'text-green-600' },
+          { label: 'Total Orders', value: totalOrders.toLocaleString(), icon: <ShoppingBag size={20} />, color: 'text-violet-600', bg: 'bg-violet-50', sub: 'Successful orders', subColor: 'text-green-600' },
           { label: 'Avg Order Value', value: `KES ${avgOrder.toLocaleString()}`, icon: <ArrowUp size={20} />, color: 'text-emerald-600', bg: 'bg-emerald-50', sub: 'Per transaction', subColor: 'text-gray-400' },
-          { label: 'Returns', value: '12', icon: <ArrowUp size={20} className="rotate-180" />, color: 'text-red-600', bg: 'bg-red-50', sub: '0.8% return rate', subColor: 'text-gray-400' },
+          { label: 'Returns/Refunds', value: returnsCount, icon: <ArrowUp size={20} className="rotate-180" />, color: 'text-red-600', bg: 'bg-red-50', sub: 'Refunded items', subColor: 'text-gray-400' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl shadow-sm p-5">
             <div className={`${s.bg} ${s.color} p-2.5 rounded-lg w-fit mb-3`}>{s.icon}</div>
@@ -104,7 +127,7 @@ export default function SalesPage() {
         <h2 className="font-bold text-[#0D1117] mb-6">Revenue — Last 7 Days</h2>
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={CHART_DATA} barSize={32}>
+            <BarChart data={dynamicChartData} barSize={32}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
               <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} />
               <YAxis axisLine={false} tickLine={false} tick={{ fill: '#9CA3AF', fontSize: 12 }} tickFormatter={v => `${Math.round(v / 1000)}k`} />
@@ -124,41 +147,45 @@ export default function SalesPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/70">
-                {['Receipt #', 'Customer', 'Items', 'Payment', 'Amount', 'Status', 'Date', ''].map(h => (
-                  <th key={h} className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider">{h}</th>
+                {['Receipt #', 'Date & Time', 'Customer', 'Items', 'Payment', 'Amount', 'Status'].map(h => (
+                  <th key={h} className="text-left px-4 py-3.5 font-semibold text-gray-600 text-xs uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={7} className="px-4 py-8 text-center text-gray-500">
                   No sales recorded for this period.
                 </td>
               </tr>
             ) : (
-              filtered.map(t => (
-                <tr key={t.id} className="hover:bg-gray-50/60 transition-colors">
-                  <td className="px-4 py-3.5 font-mono text-[#0D1117] font-medium">{t.id}</td>
-                  <td className="px-4 py-3.5 text-gray-500">{t.date}</td>
-                  <td className="px-4 py-3.5">
-                    <span className="font-medium text-[#0D1117]">{t.customer || 'Walk-in Customer'}</span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className="font-semibold text-[#0D1117]">KES {t.amount?.toLocaleString()}</span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${PAYMENT_COLORS[t.method] || 'bg-gray-100 text-gray-700'}`}>
-                      {t.method}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3.5">
-                    <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[t.status] || 'bg-gray-100 text-gray-700'}`}>
-                      {t.status}
-                    </span>
-                  </td>
-                </tr>
-              ))
+              filtered.map(t => {
+                const totalItems = t.items ? t.items.reduce((acc: number, item: any) => acc + item.qty, 0) : 0;
+                return (
+                  <tr key={t.id} className="hover:bg-gray-50/60 transition-colors">
+                    <td className="px-4 py-3.5 font-mono text-[#0D1117] font-medium">{t.id}</td>
+                    <td className="px-4 py-3.5 text-gray-500">{t.date}</td>
+                    <td className="px-4 py-3.5">
+                      <span className="font-medium text-[#0D1117]">{t.customer || 'Walk-in Customer'}</span>
+                    </td>
+                    <td className="px-4 py-3.5 text-gray-500 font-medium">{totalItems} items</td>
+                    <td className="px-4 py-3.5">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${PAYMENT_COLORS[t.method] || 'bg-gray-100 text-gray-700'}`}>
+                        {t.method}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className="font-semibold text-[#0D1117]">KES {t.amount?.toLocaleString()}</span>
+                    </td>
+                    <td className="px-4 py-3.5">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-bold ${STATUS_STYLES[t.status] || 'bg-green-50 text-green-700'}`}>
+                        {t.status}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })
             )}
             </tbody>
           </table>
