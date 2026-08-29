@@ -1,6 +1,6 @@
 ﻿'use client';
 import { useState, useEffect } from 'react';
-import { Settings, Store, Shield, Crown, Save, Globe, EyeOff, Eye, CheckCircle } from 'lucide-react';
+import { Settings, Store, Shield, Crown, Save, Globe, EyeOff, Eye, CheckCircle, Database } from 'lucide-react';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('general');
@@ -101,6 +101,7 @@ export default function SettingsPage() {
     { id: 'general', label: 'General', icon: Globe },
     { id: 'store', label: 'Store Features', icon: Store },
     { id: 'security', label: 'Security (PIN)', icon: Shield },
+    { id: 'data', label: 'Data Backup & Restore', icon: Database },
     { id: 'subscription', label: 'Subscription', icon: Crown },
   ];
 
@@ -243,8 +244,1126 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
 
-          {/* Subscription Tab */}
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+
+
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+ 
+          {/* Data Backup & Restore Tab */}
+          {activeTab === 'data' && (
+            <div className="p-6 md:p-8 space-y-6">
+              <h3 className="text-xl font-bold text-[#0D1117] mb-2">Data Management</h3>
+              <p className="text-sm text-gray-500 mb-6">Since this app runs offline in your browser, you should periodically backup your data. You can also export your data to transfer it to a different device or browser.</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Export Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center mb-4">
+                    <Save size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Export All Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Download a full backup file containing your products, sales, customers, inventory movements, and settings.</p>
+                  <button 
+                    onClick={() => {
+                      const allData: Record<string, any> = {};
+                      for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key && key.startsWith('haxone_')) {
+                          allData[key] = JSON.parse(localStorage.getItem(key) || 'null');
+                        }
+                      }
+                      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `haxone_backup_${new Date().toISOString().split('T')[0]}.json`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-xl transition-colors"
+                  >
+                    Download Backup File
+                  </button>
+                </div>
+
+                {/* Import Card */}
+                <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+                  <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center mb-4">
+                    <Database size={24} />
+                  </div>
+                  <h4 className="font-bold text-lg text-[#0D1117]">Restore Data</h4>
+                  <p className="text-sm text-gray-500 mt-1 mb-4">Upload a previously exported backup file. Warning: This will overwrite all existing data on this device.</p>
+                  <div className="relative">
+                    <input 
+                      type="file" 
+                      accept=".json"
+                      id="backupUpload"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        if (!confirm('WARNING: This will overwrite all current local data with the backup file. Are you sure you want to proceed?')) return;
+                        
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          try {
+                            const data = JSON.parse(event.target?.result as string);
+                            for (const key in data) {
+                              if (key.startsWith('haxone_')) {
+                                localStorage.setItem(key, JSON.stringify(data[key]));
+                              }
+                            }
+                            alert('Data successfully restored! The app will now reload.');
+                            window.location.reload();
+                          } catch (err) {
+                            alert('Invalid backup file. Restoration failed.');
+                          }
+                        };
+                        reader.readAsText(file);
+                      }}
+                    />
+                    <button 
+                      onClick={() => document.getElementById('backupUpload')?.click()}
+                      className="w-full bg-white border-2 border-dashed border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 text-gray-700 font-bold py-2.5 rounded-xl transition-all"
+                    >
+                      Upload Backup File
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+{/* Subscription Tab */}
           {activeTab === 'subscription' && (
             <div className="p-6 md:p-8">
               <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 rounded-2xl p-6 mb-8 flex items-center justify-between">
@@ -284,3 +1403,4 @@ export default function SettingsPage() {
     </div>
   );
 }
+

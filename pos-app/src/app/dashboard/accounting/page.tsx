@@ -174,11 +174,11 @@ export default function AccountingPage() {
     }
   }, []);
 
-  const totalRevenue = sales.reduce((sum, s) => sum + (s.amount || 0), 0);
+  const totalRevenue = sales.reduce((sum, s) => sum + (Number(s.amount) || Number(s.total) || 0), 0);
   
   const cogs = sales.reduce((sum, s) => {
     if (!s.items) return sum;
-    return sum + s.items.reduce((acc: number, item: any) => acc + (item.buyPrice * item.qty), 0);
+    return sum + s.items.reduce((acc: number, item: any) => acc + ((Number(item.costPrice) || Number(item.buyPrice) || 0) * (Number(item.quantity) || Number(item.qty) || 1)), 0);
   }, 0);
 
   const grossProfit = totalRevenue - cogs;

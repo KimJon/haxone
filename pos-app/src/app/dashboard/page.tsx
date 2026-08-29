@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from 'react';
 import { ArrowUp, ArrowDown, MoreHorizontal, Database } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -17,9 +17,9 @@ export default function DashboardPage() {
       
       setHasData(sales.length > 0 || products.length > 0);
 
-      const totalSales = sales.reduce((acc: number, s: any) => acc + (s.total || 0), 0);
+      const totalSales = sales.reduce((acc: number, s: any) => acc + (s.amount || s.total || 0), 0);
       const totalCost = sales.reduce((acc: number, s: any) => {
-        return acc + (s.items || []).reduce((cAcc: number, item: any) => cAcc + ((item.costPrice || 0) * item.quantity), 0);
+        return acc + (s.items || []).reduce((cAcc: number, item: any) => cAcc + ((Number(item.costPrice) || Number(item.buyPrice) || 0) * (Number(item.quantity) || Number(item.qty) || 1)), 0);
       }, 0);
       const profit = totalSales - totalCost;
 
