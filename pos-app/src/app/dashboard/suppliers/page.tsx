@@ -20,6 +20,7 @@ import {
 interface Supplier {
   id: number;
   company: string;
+  name?: string; // Legacy support
   contact: string;
   phone: string;
   email: string;
