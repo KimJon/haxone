@@ -2,4 +2,6 @@
 deployment:
   tasks:
     - export DEPLOYPATH=/home/$USER/public_html/
+    - cd pos-app && node fix-paths-absolute.js
+    - cd pos-app/out && mv _next assets
     - /bin/cp -R pos-app/out/* $DEPLOYPATH

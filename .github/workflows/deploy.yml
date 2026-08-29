@@ -1,4 +1,4 @@
-﻿name: Deploy to cPanel
+name: Deploy to cPanel
 
 on:
   push:
@@ -29,6 +29,11 @@ jobs:
 
       - name: Build and Export Next.js App
         run: npm run build
+
+      - name: Rename _next to assets for cPanel compatibility
+        run: |
+          node fix-paths-absolute.js
+          mv out/_next out/assets
 
       - name: Deploy to cPanel via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
