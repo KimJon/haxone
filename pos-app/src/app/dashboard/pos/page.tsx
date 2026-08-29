@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,7 +43,10 @@ export default function POSPage() {
   const tax = subtotal * taxRate;
   const total = subtotal + tax;
 
-  const filteredProducts = products.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.id.toLowerCase().includes(searchQuery.toLowerCase()));
+  const filteredProducts = products.filter(p => 
+    (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (p.id || '').toLowerCase().includes(searchQuery.toLowerCase())
+  );
   const filteredCustomers = customerSearch.length > 0 ? customers.filter(c => c.name.toLowerCase().includes(customerSearch.toLowerCase()) || c.phone.includes(customerSearch)) : [];
 
   const handlePayment = (method: string) => {
@@ -153,25 +156,38 @@ export default function POSPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4">
-            {filteredProducts.map(p => (
-              <div 
-                key={p.id} 
-                onClick={() => addToCart(p)}
-                className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm cursor-pointer hover:border-[#2563EB] hover:shadow-md transition-all group flex flex-col justify-between"
-              >
-                <div>
-                   <div className="text-sm font-semibold text-[#0D1117] line-clamp-2 leading-tight group-hover:text-[#2563EB] transition-colors">{p.name}</div>
-                   <div className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">{p.id}</div>
-                </div>
-                <div className="mt-3 flex items-end justify-between">
-                  <div className="text-sm font-black text-[#0D1117]">KES {p.price}</div>
-                  <div className={`text-xs font-bold px-1.5 rounded ${p.stock <= (p.minStock || 5) ? 'bg-red-50 text-red-600' : 'bg-gray-100 text-gray-500'}`}>
-                    {p.stock}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 lg:gap-4 pb-20 lg:pb-0">
+              {filteredProducts.map((p, i) => {
+                const colors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4'];
+                const color = colors[i % colors.length];
+                return (
+                  <div 
+                    key={p.id} 
+                    onClick={() => addToCart(p)}
+                    className="bg-white rounded-2xl border border-gray-100 shadow-sm cursor-pointer hover:border-[#2563EB] hover:shadow-md transition-all group flex flex-col overflow-hidden h-[160px]"
+                  >
+                    <div className="h-16 flex items-center justify-center relative" style={{ backgroundColor: `${color}15` }}>
+                       <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm" style={{ backgroundColor: color }}>
+                         {(p.name || 'P').substring(0, 2).toUpperCase()}
+                       </div>
+                       <div className="absolute top-2 right-2">
+                         <div className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${p.stock <= (p.minStock || 5) ? 'bg-red-500 text-white' : 'bg-white/80 text-gray-700 backdrop-blur-sm shadow-sm'}`}>
+                           {p.stock} left
+                         </div>
+                       </div>
+                    </div>
+                    <div className="p-3 flex flex-col justify-between flex-1">
+                      <div>
+                         <div className="text-sm font-bold text-[#0D1117] line-clamp-2 leading-tight group-hover:text-[#2563EB] transition-colors">{p.name}</div>
+                         <div className="text-[10px] text-gray-400 mt-0.5 uppercase tracking-wider truncate">{p.category || p.id}</div>
+                      </div>
+                      <div className="mt-2">
+                        <div className="text-sm font-black text-[#0D1117]">KES {(p.price || 0).toLocaleString()}</div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
+                );
+              })}
             {filteredProducts.length === 0 && (
               <div className="col-span-full py-12 text-center text-gray-400 font-medium">
                 No products found.
