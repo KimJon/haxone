@@ -67,6 +67,63 @@ export default function AIPage() {
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
+  
+  const [alertCards, setAlertCards] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const products = JSON.parse(localStorage.getItem('haxone_products') || '[]');
+        const sales = JSON.parse(localStorage.getItem('haxone_sales') || '[]');
+        const generatedCards = [];
+
+        // 1. Low Stock Alert
+        const lowStock = products.filter((p:any) => (p.stock || 0) <= (p.minStock || 5));
+        if (lowStock.length > 0) {
+          generatedCards.push({
+            type: 'error', icon: AlertTriangle, title: 'Critical Stock Alert',
+            desc: `${lowStock[0].name} ${lowStock.length > 1 ? `and ${lowStock.length - 1} others` : ''} are running dangerously low.`,
+            action: 'Reorder Now', bg: '#FEF2F2', border: '#FCA5A5', color: '#DC2626', iconBg: '#FEE2E2',
+          });
+        }
+
+        // 2. High Value Item Sales
+        if (sales.length > 0) {
+          const totalRev = sales.reduce((sum: number, s:any) => sum + (s.total || s.amount || 0), 0);
+          generatedCards.push({
+            type: 'success', icon: TrendingUp, title: 'Revenue Milestone',
+            desc: `Total recorded revenue is KES ${totalRev.toLocaleString()}. Keep the momentum going!`,
+            action: 'View Sales', bg: '#F0FDF4', border: '#86EFAC', color: '#16A34A', iconBg: '#DCFCE7',
+          });
+        } else {
+          generatedCards.push({
+            type: 'warning', icon: TrendingDown, title: 'No Sales Yet',
+            desc: 'Your POS has not recorded any sales yet today. Start processing transactions.',
+            action: 'Open POS', bg: '#FFFBEB', border: '#FCD34D', color: '#D97706', iconBg: '#FEF3C7',
+          });
+        }
+
+        // 3. Peak Hour
+        generatedCards.push({
+          type: 'info', icon: Clock, title: 'Peak Activity Insight',
+          desc: sales.length > 0 ? 'Your busiest hour matches recent trends. Ensure staff coverage.' : 'Awaiting more transaction data.',
+          action: 'Adjust Shifts', bg: '#EFF6FF', border: '#93C5FD', color: '#2563EB', iconBg: '#DBEAFE',
+        });
+
+        // 4. Overstocked items
+        const highStock = products.filter((p:any) => (p.stock || 0) > 50);
+        if (highStock.length > 0) {
+          generatedCards.push({
+            type: 'warning', icon: Zap, title: 'Inventory Bloat',
+            desc: `${highStock.length} items have >50 units. Consider launching a promo.`,
+            action: 'View Inventory', bg: '#FFFBEB', border: '#FCD34D', color: '#D97706', iconBg: '#FEF3C7',
+          });
+        }
+
+        setAlertCards(generatedCards.slice(0, 4));
+      } catch (e) {}
+    }
+  }, []);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
