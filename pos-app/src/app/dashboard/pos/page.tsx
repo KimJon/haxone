@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Plus, Minus, Trash2, CreditCard, Banknote, History, Wifi, WifiOff, Users, ArrowRight, CheckCircle2, QrCode } from 'lucide-react';
+import { Search, Plus, Minus, Trash2, CreditCard, Banknote, History, Wifi, WifiOff, Users, ArrowRight, CheckCircle2, QrCode, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 
 export default function POSPage() {
