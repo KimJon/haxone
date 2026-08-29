@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { SearchableSelect } from '@/components/SearchableSelect';
 import {
   Package, Search, Plus, ArrowDown, ArrowUp, X, Filter, Trash2, Shield, Box, FileText, CheckCircle, Truck, DollarSign
 } from 'lucide-react';
@@ -396,14 +397,15 @@ export default function InventoryPage() {
                <div className="w-full lg:w-1/2 space-y-4 border-r border-gray-100 pr-0 lg:pr-6">
                  <div>
                    <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Search Products to Receive</label>
-                   <select onChange={(e) => {
-                     const p = products.find(p => p.id === e.target.value);
-                     if(p) addToCart(p);
-                     e.target.value = "";
-                   }} className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:border-[#2563EB] bg-gray-50">
-                     <option value="">Select a product...</option>
-                     {products.map(p => <option key={p.id} value={p.id}>{p.name} (Current: {p.stock})</option>)}
-                   </select>
+                    <SearchableSelect 
+                      options={products.map(p => ({ value: p.id, label: `${p.name} (Current: ${p.stock})` }))}
+                      value=""
+                      onChange={(val) => {
+                        const p = products.find(p => p.id === val);
+                        if(p) addToCart(p);
+                      }}
+                      placeholder="Select a product..."
+                    />
                  </div>
                  
                  <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -436,10 +438,14 @@ export default function InventoryPage() {
                  <div>
                     <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Supplier</label>
                     <div className="flex gap-2">
-                      <select value={selectedSupplier} onChange={e => setSelectedSupplier(e.target.value)} className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:border-[#2563EB]">
-                        <option value="">Select Supplier...</option>
-                        {suppliers.map(s => <option key={s.id} value={s.company || s.name}>{s.company || s.name}</option>)}
-                      </select>
+                      <div className="flex-1">
+                        <SearchableSelect 
+                          options={suppliers.map(s => ({ value: s.company || s.name || '', label: s.company || s.name || '' }))}
+                          value={selectedSupplier}
+                          onChange={(val) => setSelectedSupplier(val)}
+                          placeholder="Select Supplier..."
+                        />
+                      </div>
                       <input type="text" placeholder="Or New Supplier Name" value={newSupplierName} onChange={e => setNewSupplierName(e.target.value)} className="w-1/3 border border-gray-200 rounded-lg px-2 text-sm"/>
                       <button onClick={addSupplier} className="bg-gray-100 text-gray-600 px-3 rounded-lg hover:bg-gray-200 font-bold text-sm">+</button>
                     </div>
@@ -501,14 +507,15 @@ export default function InventoryPage() {
                <div className="w-full lg:w-1/2 space-y-4 border-r border-gray-100 pr-0 lg:pr-6">
                  <div>
                    <label className="block text-xs font-bold text-gray-600 mb-1.5 uppercase tracking-wider">Search Products to Dispatch</label>
-                   <select onChange={(e) => {
-                     const p = products.find(p => p.id === e.target.value);
-                     if(p) addToCart(p);
-                     e.target.value = "";
-                   }} className="w-full border border-gray-200 rounded-lg px-4 py-2.5 text-sm focus:border-[#2563EB] bg-gray-50">
-                     <option value="">Select a product...</option>
-                     {products.map(p => <option key={p.id} value={p.id}>{p.name} (Avail: {p.stock || 0})</option>)}
-                   </select>
+                    <SearchableSelect 
+                      options={products.map(p => ({ value: p.id, label: `${p.name} (Avail: ${p.stock || 0})` }))}
+                      value=""
+                      onChange={(val) => {
+                        const p = products.find(p => p.id === val);
+                        if(p) addToCart(p);
+                      }}
+                      placeholder="Select a product..."
+                    />
                  </div>
                  
                  <div className="border border-gray-200 rounded-xl overflow-hidden">

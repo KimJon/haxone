@@ -182,19 +182,24 @@ export default function POSPage() {
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden relative">
         {/* Left: Product Grid */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 bg-gray-50/50 relative z-10 h-1/2 lg:h-auto">
-          <div className="lg:hidden mb-4 relative z-20">
+        <div className="flex-1 overflow-y-visible lg:overflow-y-auto p-4 lg:p-6 bg-gray-50/50 relative z-10 min-h-[50vh] lg:min-h-0">
+          <div className="lg:hidden mb-4 relative z-20 sticky top-0 bg-gray-50/90 backdrop-blur-md pt-2 pb-4 -mt-2">
              <div className="relative w-full">
-              <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <Search className="w-5 h-5 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <Input 
-                placeholder="Search product..." 
-                className="pl-9 bg-white" 
+                placeholder="Search products..." 
+                className="pl-11 pr-10 bg-white border-gray-200 focus:border-[#2563EB] shadow-sm h-12 text-base rounded-xl" 
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
               />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-1">
+                  <X className="w-4 h-4" />
+                </button>
+              )}
             </div>
           </div>
 
@@ -239,7 +244,7 @@ export default function POSPage() {
         </div>
 
         {/* Right: Cart Panel */}
-        <div className="w-full lg:w-[400px] h-[45vh] lg:h-auto bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col flex-shrink-0 z-20 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] lg:shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]">
+        <div className="w-full lg:w-[400px] h-auto bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col flex-shrink-0 z-20 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] lg:shadow-[-4px_0_15px_-3px_rgba(0,0,0,0.05)]">
           {/* Customer Selection */}
           <div className="p-4 border-b border-gray-100 bg-gray-50/50">
             {!selectedCustomer ? (

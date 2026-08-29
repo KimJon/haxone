@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import { useState, useEffect } from 'react';
 import { Plus, Search, Edit2, Trash2, X, Package, TrendingDown, AlertTriangle, CheckCircle } from 'lucide-react';
 
@@ -98,8 +98,519 @@ export default function ProductsPage() {
     setIsEditing(false);
     setShowModal(true);
   };
+  const handleExportCSV = () => {
+    const headers = ['id', 'name', 'sku', 'category', 'buyPrice', 'sellPrice', 'stock', 'minStock', 'unit'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    products.forEach(p => {
+      const row = headers.map(h => `"${(p[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `haxone_products_template_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  const filtered = products.filter(p => {
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newProducts = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const prod: any = {};
+          headers.forEach((h, index) => {
+            prod[h] = values[index];
+          });
+          
+          if (prod.name) {
+            newProducts.push({
+              id: prod.id || `PRD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+              name: prod.name,
+              sku: prod.sku || '',
+              category: prod.category || 'General',
+              buyPrice: Number(prod.buyPrice) || 0,
+              sellPrice: Number(prod.sellPrice) || 0,
+              stock: Number(prod.stock) || 0,
+              minStock: Number(prod.minStock) || 5,
+              unit: prod.unit || 'pcs'
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          if(confirm(`Found ${newProducts.length} valid products in CSV. Import them now?`)) {
+            const updated = [...products, ...newProducts];
+            setProducts(updated);
+            if (typeof window !== 'undefined') localStorage.setItem('haxone_products', JSON.stringify(updated));
+            alert('Products imported successfully!');
+          }
+        } else {
+          alert('No valid products found in CSV. Please check the format.');
+        }
+      } catch (err) {
+        alert('Error parsing CSV file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+
+  const handleExportCSV = () => {
+    const headers = ['id', 'name', 'sku', 'category', 'buyPrice', 'sellPrice', 'stock', 'minStock', 'unit'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    products.forEach(p => {
+      const row = headers.map(h => `"${(p[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `haxone_products_template_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newProducts = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const prod: any = {};
+          headers.forEach((h, index) => {
+            prod[h] = values[index];
+          });
+          
+          if (prod.name) {
+            newProducts.push({
+              id: prod.id || `PRD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+              name: prod.name,
+              sku: prod.sku || '',
+              category: prod.category || 'General',
+              buyPrice: Number(prod.buyPrice) || 0,
+              sellPrice: Number(prod.sellPrice) || 0,
+              stock: Number(prod.stock) || 0,
+              minStock: Number(prod.minStock) || 5,
+              unit: prod.unit || 'pcs'
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          if(confirm(`Found ${newProducts.length} valid products in CSV. Import them now?`)) {
+            const updated = [...products, ...newProducts];
+            setProducts(updated);
+            if (typeof window !== 'undefined') localStorage.setItem('haxone_products', JSON.stringify(updated));
+            alert('Products imported successfully!');
+          }
+        } else {
+          alert('No valid products found in CSV. Please check the format.');
+        }
+      } catch (err) {
+        alert('Error parsing CSV file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+
+
+  const handleExportCSV = () => {
+    const headers = ['id', 'name', 'sku', 'category', 'buyPrice', 'sellPrice', 'stock', 'minStock', 'unit'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    products.forEach(p => {
+      const row = headers.map(h => `"${(p[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `haxone_products_template_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newProducts = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const prod: any = {};
+          headers.forEach((h, index) => {
+            prod[h] = values[index];
+          });
+          
+          if (prod.name) {
+            newProducts.push({
+              id: prod.id || `PRD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+              name: prod.name,
+              sku: prod.sku || '',
+              category: prod.category || 'General',
+              buyPrice: Number(prod.buyPrice) || 0,
+              sellPrice: Number(prod.sellPrice) || 0,
+              stock: Number(prod.stock) || 0,
+              minStock: Number(prod.minStock) || 5,
+              unit: prod.unit || 'pcs'
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          if(confirm(`Found ${newProducts.length} valid products in CSV. Import them now?`)) {
+            const updated = [...products, ...newProducts];
+            setProducts(updated);
+            if (typeof window !== 'undefined') localStorage.setItem('haxone_products', JSON.stringify(updated));
+            alert('Products imported successfully!');
+          }
+        } else {
+          alert('No valid products found in CSV. Please check the format.');
+        }
+      } catch (err) {
+        alert('Error parsing CSV file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+
+  const handleExportCSV = () => {
+    const headers = ['id', 'name', 'sku', 'category', 'buyPrice', 'sellPrice', 'stock', 'minStock', 'unit'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    products.forEach(p => {
+      const row = headers.map(h => `"${(p[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `haxone_products_template_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newProducts = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const prod: any = {};
+          headers.forEach((h, index) => {
+            prod[h] = values[index];
+          });
+          
+          if (prod.name) {
+            newProducts.push({
+              id: prod.id || `PRD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+              name: prod.name,
+              sku: prod.sku || '',
+              category: prod.category || 'General',
+              buyPrice: Number(prod.buyPrice) || 0,
+              sellPrice: Number(prod.sellPrice) || 0,
+              stock: Number(prod.stock) || 0,
+              minStock: Number(prod.minStock) || 5,
+              unit: prod.unit || 'pcs'
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          if(confirm(`Found ${newProducts.length} valid products in CSV. Import them now?`)) {
+            const updated = [...products, ...newProducts];
+            setProducts(updated);
+            if (typeof window !== 'undefined') localStorage.setItem('haxone_products', JSON.stringify(updated));
+            alert('Products imported successfully!');
+          }
+        } else {
+          alert('No valid products found in CSV. Please check the format.');
+        }
+      } catch (err) {
+        alert('Error parsing CSV file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+
+
+  const handleExportCSV = () => {
+    const headers = ['id', 'name', 'sku', 'category', 'buyPrice', 'sellPrice', 'stock', 'minStock', 'unit'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    products.forEach(p => {
+      const row = headers.map(h => `"${(p[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `haxone_products_template_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newProducts = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const prod: any = {};
+          headers.forEach((h, index) => {
+            prod[h] = values[index];
+          });
+          
+          if (prod.name) {
+            newProducts.push({
+              id: prod.id || `PRD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+              name: prod.name,
+              sku: prod.sku || '',
+              category: prod.category || 'General',
+              buyPrice: Number(prod.buyPrice) || 0,
+              sellPrice: Number(prod.sellPrice) || 0,
+              stock: Number(prod.stock) || 0,
+              minStock: Number(prod.minStock) || 5,
+              unit: prod.unit || 'pcs'
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          if(confirm(`Found ${newProducts.length} valid products in CSV. Import them now?`)) {
+            const updated = [...products, ...newProducts];
+            setProducts(updated);
+            if (typeof window !== 'undefined') localStorage.setItem('haxone_products', JSON.stringify(updated));
+            alert('Products imported successfully!');
+          }
+        } else {
+          alert('No valid products found in CSV. Please check the format.');
+        }
+      } catch (err) {
+        alert('Error parsing CSV file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+ 
+  const handleExportCSV = () => {
+    const headers = ['id', 'name', 'sku', 'category', 'buyPrice', 'sellPrice', 'stock', 'minStock', 'unit'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    products.forEach(p => {
+      const row = headers.map(h => `"${(p[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `haxone_products_template_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newProducts = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const prod: any = {};
+          headers.forEach((h, index) => {
+            prod[h] = values[index];
+          });
+          
+          if (prod.name) {
+            newProducts.push({
+              id: prod.id || `PRD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+              name: prod.name,
+              sku: prod.sku || '',
+              category: prod.category || 'General',
+              buyPrice: Number(prod.buyPrice) || 0,
+              sellPrice: Number(prod.sellPrice) || 0,
+              stock: Number(prod.stock) || 0,
+              minStock: Number(prod.minStock) || 5,
+              unit: prod.unit || 'pcs'
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          if(confirm(`Found ${newProducts.length} valid products in CSV. Import them now?`)) {
+            const updated = [...products, ...newProducts];
+            setProducts(updated);
+            if (typeof window !== 'undefined') localStorage.setItem('haxone_products', JSON.stringify(updated));
+            alert('Products imported successfully!');
+          }
+        } else {
+          alert('No valid products found in CSV. Please check the format.');
+        }
+      } catch (err) {
+        alert('Error parsing CSV file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+ 
+  const handleExportCSV = () => {
+    const headers = ['id', 'name', 'sku', 'category', 'buyPrice', 'sellPrice', 'stock', 'minStock', 'unit'];
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+    
+    products.forEach(p => {
+      const row = headers.map(h => `"${(p[h] || '').toString().replace(/"/g, '""')}"`);
+      csvRows.push(row.join(','));
+    });
+    
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `haxone_products_template_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportCSV = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        const lines = text.split('\n');
+        const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+        
+        const newProducts = [];
+        for (let i = 1; i < lines.length; i++) {
+          if (!lines[i].trim()) continue;
+          const values = lines[i].split(',').map(v => v.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+          const prod: any = {};
+          headers.forEach((h, index) => {
+            prod[h] = values[index];
+          });
+          
+          if (prod.name) {
+            newProducts.push({
+              id: prod.id || `PRD-${Math.random().toString(36).substr(2, 6).toUpperCase()}`,
+              name: prod.name,
+              sku: prod.sku || '',
+              category: prod.category || 'General',
+              buyPrice: Number(prod.buyPrice) || 0,
+              sellPrice: Number(prod.sellPrice) || 0,
+              stock: Number(prod.stock) || 0,
+              minStock: Number(prod.minStock) || 5,
+              unit: prod.unit || 'pcs'
+            });
+          }
+        }
+        
+        if (newProducts.length > 0) {
+          if(confirm(`Found ${newProducts.length} valid products in CSV. Import them now?`)) {
+            const updated = [...products, ...newProducts];
+            setProducts(updated);
+            if (typeof window !== 'undefined') localStorage.setItem('haxone_products', JSON.stringify(updated));
+            alert('Products imported successfully!');
+          }
+        } else {
+          alert('No valid products found in CSV. Please check the format.');
+        }
+      } catch (err) {
+        alert('Error parsing CSV file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
+
+const filtered = products.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase());
     const matchCat = category === 'All' || p.category === category;
     return matchSearch && matchCat;
@@ -117,7 +628,16 @@ export default function ProductsPage() {
           <h1 className="text-2xl font-bold text-[#0D1117]">Products</h1>
           <p className="text-sm text-gray-500 mt-0.5">Manage your product catalogue</p>
         </div>
-        <div className="flex gap-3">
+                <div className="flex gap-3">
+          <button onClick={handleExportCSV} className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
+            <Download size={16} /> CSV Template
+          </button>
+          <div className="relative">
+            <input type="file" accept=".csv" id="csvUpload" className="hidden" onChange={handleImportCSV} />
+            <button onClick={() => document.getElementById('csvUpload')?.click()} className="flex items-center gap-2 bg-white border border-gray-200 hover:bg-gray-50 text-gray-700 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
+              <Upload size={16} /> Import CSV
+            </button>
+          </div>
           <button onClick={openNewProductModal} className="flex items-center gap-2 bg-[#2563EB] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-sm">
             <Plus size={16} /> Add Product
           </button>
@@ -146,7 +666,7 @@ export default function ProductsPage() {
       <div className="bg-white rounded-xl shadow-sm p-4 mb-4 flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products or SKU…" className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2563EB]" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search products or SKUâ€¦" className="w-full pl-9 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-[#2563EB]" />
         </div>
         <select value={category} onChange={e => setCategory(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:border-[#2563EB] bg-white">
           {categories.map(c => <option key={c}>{c}</option>)}
@@ -261,3 +781,5 @@ export default function ProductsPage() {
     </div>
   );
 }
+
+
